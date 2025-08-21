@@ -27,7 +27,7 @@
 }
 
 .message {
-  max-width: 70%; /* messages won't stretch too far */
+  max-width: 50%; /* messages won't stretch too far */
   padding: 0.8rem 1rem;
   border-radius: 1rem;
   word-wrap: break-word;
@@ -110,4 +110,53 @@
   object-fit: contain;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+/* RESPONSIVENESS */
+@media (max-width: 768px) {
+  .chatContainer {
+    height: 100vh; /* full height on mobile */
+  }
+
+  .header {
+    font-size: 0.9rem;
+    padding: 0.8rem;
+  }
+
+  .messages {
+    padding: 0.5rem;
+    gap: 0.4rem;
+  }
+
+  .message {
+    max-width: 70%;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .inputBar {
+    padding: 1rem;
+    gap: 0.4rem;
+  }
+
+  .inputBar input {
+    padding: 1rem;
+  }
+
+  .uploadBtn,
+  .sendBtn {
+    padding: 0.3rem;
+  }
+
+  .fallbackText h3 {
+    font-size: 1.3rem;
+  }
+
+  .fallbackText p {
+    font-size: 0.9rem;
+    max-width: 250px;
+  }
+
+  .fallbackText img {
+    width: 140px;
+  }
 }

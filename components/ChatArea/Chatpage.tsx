@@ -15,7 +15,6 @@ interface Message {
   topic: string;
   clerkId?: string;
   createdAt?: string;
-  sender?: "user" | "other"; // UI helper
 }
 
 export default function ChatPage() {
@@ -23,14 +22,27 @@ export default function ChatPage() {
   const { user } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isAutoScroll, setIsAutoScroll] = useState(true);
 
-  // Scroll to bottom whenever messages update
+  // Auto-scroll effect
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (isAutoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isAutoScroll]);
 
-  // Fetch messages when topic changes and poll for new messages
+  // Detect user scroll
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } =
+      messagesContainerRef.current;
+    setIsAutoScroll(scrollTop + clientHeight >= scrollHeight - 10);
+  };
+
+  // Fetch messages and poll
   useEffect(() => {
     if (!activeTopic) return;
 
@@ -44,13 +56,12 @@ export default function ChatPage() {
     };
 
     fetchMessages();
+    const interval = setInterval(fetchMessages, 3000);
 
-    const interval = setInterval(fetchMessages, 3000); // poll every 3s
-
-    return () => clearInterval(interval); // cleanup on unmount or topic change
+    return () => clearInterval(interval);
   }, [activeTopic]);
 
-  // Send new message
+  // Send message
   const handleSend = async () => {
     if (!input.trim() || !activeTopic || !user) return;
 
@@ -58,13 +69,12 @@ export default function ChatPage() {
       message: input,
       topic: activeTopic,
       clerkId: user.id,
-      sender: "user",
     };
 
     try {
       const res = await axios.post("/api/messages", newMessage);
-      setMessages((prev) => [...prev, res.data]); // append new message
-      setInput(""); // clear input
+      setMessages((prev) => [...prev, res.data]);
+      setInput("");
     } catch (error) {
       console.error("❌ Error sending message:", error);
     }
@@ -77,31 +87,35 @@ export default function ChatPage() {
       </div>
 
       <div
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
         className={`${styles.messages} ${
           messages.length === 0 ? styles.empty : ""
         }`}
       >
         {messages.length === 0 ? (
           <div className={styles.fallbackText}>
-            <h3>No whispers yet for {activeTopic}</h3>
+            <h3>No whispers yet for "{activeTopic}"</h3>
             <Image src={fallback} alt="Fallback Image" />
             <p>
               What is on your mind? With the most open community in the world
             </p>
           </div>
         ) : (
-          messages.map((msg, idx) => (
-            <div
-              key={msg._id || idx}
-              className={`${styles.message} ${
-                msg.clerkId === user?.id ? styles.user : styles.other
-              }`}
-            >
-              {msg.message}
-            </div>
-          ))
+          messages.map((msg, idx) => {
+            const isUser = msg.clerkId === user?.id;
+            return (
+              <div
+                key={msg._id || idx}
+                className={`${styles.message} ${
+                  isUser ? styles.user : styles.other
+                }`}
+              >
+                {msg.message}
+              </div>
+            );
+          })
         )}
-        {/* Dummy div for auto-scroll */}
         <div ref={messagesEndRef} />
       </div>
 
