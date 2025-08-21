@@ -1,0 +1,202 @@
+.sidebar {
+  width: 280px;
+  height: 100vh;
+  background: linear-gradient(145deg, #4f2f53, #5a0669);
+  border-right: 1px solid rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: width 0.3s ease;
+  padding-bottom: 50px;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.logo {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 20px;
+}
+
+.logo h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #b79be7;
+  font-weight: 700;
+}
+
+.logo p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #e7e2e2;
+}
+
+.topics {
+  margin-top: 1.5rem;
+  padding: 20px;
+  flex: 1;
+}
+
+.topics h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+.topics ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.topicItem {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out, transform 0.1s ease-in-out;
+}
+
+.topicItem:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(2px);
+}
+
+.active {
+  background: rgba(255, 255, 255, 0.15);
+  font-weight: 600;
+}
+
+.icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.topicName {
+  margin: 0;
+  font-size: 1rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.whispers {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile h5 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #fff;
+}
+
+.profile p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+.wrapper img {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  border: 2px solid #b48ef7;
+}
+
+/* Mobile compact styles */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 220px;
+  }
+
+  .logo {
+    padding: 10px;
+  }
+
+  .logo h1 {
+    font-size: 1.1rem;
+  }
+
+  .logo p {
+    font-size: 0.75rem;
+  }
+
+  .topics {
+    padding: 14px;
+    margin-top: 0.75rem;
+  }
+
+  .topics h2 {
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .topicItem {
+    padding: 0.4rem 0.6rem;
+    gap: 0.4rem;
+  }
+
+  .icon {
+    font-size: 1rem;
+  }
+
+  .topicName {
+    font-size: 0.85rem;
+  }
+
+  .whispers {
+    font-size: 0.7rem;
+  }
+
+  .profile {
+    padding: 12px;
+    gap: 0.5rem;
+  }
+
+  .profile h5 {
+    font-size: 0.85rem;
+  }
+
+  .profile p {
+    font-size: 0.65rem;
+  }
+
+  .wrapper img {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.userAvatar {
+  width: 45px !important;
+  height: 45px !important;
+  border-radius: 50% !important;
+  border: 2px solid #b48ef7 !important;
+  overflow: hidden;
+}
+@media (max-width: 768px) {
+  .userAvatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+}

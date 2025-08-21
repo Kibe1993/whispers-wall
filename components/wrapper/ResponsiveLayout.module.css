@@ -1,0 +1,58 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar wrapper (mobile: hidden, desktop: shown) */
+.sidebarWrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  height: 100vh;
+  transition: transform 0.3s ease;
+  background: #fff;
+}
+
+.closed {
+  transform: translateX(-100%);
+}
+
+.open {
+  transform: translateX(0);
+}
+
+/* Show sidebar by default on medium+ screens */
+@media (min-width: 768px) {
+  .sidebarWrapper {
+    position: relative;
+    transform: translateX(0) !important;
+  }
+}
+
+/* Main content */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+
+.content {
+  flex: 1;
+  padding: 1rem;
+}
+
+/* Overlay when sidebar is open (mobile only) */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 30;
+}
+
+@media (min-width: 768px) {
+  .overlay {
+    display: none;
+  }
+}
