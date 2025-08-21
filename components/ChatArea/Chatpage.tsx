@@ -1,29 +1,72 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
+import axios from "axios";
 import styles from "./Chatpage.module.css";
 import { Send, Upload } from "lucide-react";
 import { useTopic } from "@/library/context/TopicContext";
+import { useUser } from "@clerk/nextjs"; // 👈 import Clerk hook
+
+interface Message {
+  _id?: string;
+  message: string;
+  topic: string;
+  clerkId?: string;
+  createdAt?: string;
+  sender?: "user" | "other"; // UI helper
+}
 
 export default function ChatPage() {
   const { activeTopic } = useTopic();
-  const [messages, setMessages] = useState<{ text: string; sender: string }[]>(
-    []
-  );
+  const { user } = useUser(); // 👈 Clerk user
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    const userMessage = { text: input, sender: "user" };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
+  // Fetch existing messages when topic changes
+  useEffect(() => {
+    if (!activeTopic) return;
 
-    setTimeout(() => {
-      const replyMessage = {
-        text: `Reply to "${userMessage.text}"`,
-        sender: "other",
-      };
-      setMessages((prev) => [...prev, replyMessage]);
-    }, 1000);
+    const fetchMessages = async () => {
+      try {
+        const res = await axios.get(`/api/messages?topic=${activeTopic}`);
+        setMessages(res.data);
+      } catch (error) {
+        console.error("❌ Error fetching messages:", error);
+      }
+    };
+
+    fetchMessages();
+  }, [activeTopic]);
+
+  // Send new message
+  const handleSend = async () => {
+    if (!input.trim()) {
+      console.warn("⚠️ Empty input, aborting");
+      return;
+    }
+    if (!activeTopic) {
+      return;
+    }
+    if (!user) {
+      return;
+    }
+
+    const newMessage: Message = {
+      message: input,
+      topic: activeTopic,
+      clerkId: user.id,
+      sender: "user",
+    };
+
+    try {
+      console.log("➡️ Posting to /api/messages with payload:", newMessage);
+      const res = await axios.post("/api/messages", newMessage);
+
+      setMessages((prev) => [...prev, res.data]); // append new message
+      setInput(""); // clear input
+    } catch (error) {
+      console.error("❌ Error sending message:", error);
+    }
   };
 
   return (
@@ -35,12 +78,12 @@ export default function ChatPage() {
       <div className={styles.messages}>
         {messages.map((msg, idx) => (
           <div
-            key={idx}
+            key={msg._id || idx}
             className={`${styles.message} ${
-              msg.sender === "user" ? styles.user : styles.other
+              msg.clerkId === user?.id ? styles.user : styles.other
             }`}
           >
-            {msg.text}
+            {msg.message}
           </div>
         ))}
       </div>
@@ -49,6 +92,7 @@ export default function ChatPage() {
         className={styles.inputBar}
         onSubmit={(e) => {
           e.preventDefault();
+
           handleSend();
         }}
       >
@@ -59,7 +103,9 @@ export default function ChatPage() {
           type="text"
           placeholder="Type your message..."
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value);
+          }}
         />
         <button type="submit" className={styles.sendBtn}>
           <Send size={20} />
