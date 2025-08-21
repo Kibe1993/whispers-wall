@@ -20,14 +20,20 @@
   flex: 1;
   padding: 1rem;
   overflow-y: auto;
-  max-width: 750px;
-  word-wrap: break-word;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   scroll-behavior: smooth;
 }
 
+.message {
+  max-width: 70%; /* messages won't stretch too far */
+  padding: 0.8rem 1rem;
+  border-radius: 1rem;
+  word-wrap: break-word;
+  display: inline-block; /* prevents full width */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
 .messages.empty {
   justify-content: center;
   align-items: center;
@@ -43,6 +49,7 @@
 .other {
   align-self: flex-start;
   background: #481a50;
+  color: white;
   border-bottom-left-radius: 0.2rem;
 }
 
