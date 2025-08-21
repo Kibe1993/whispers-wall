@@ -20,16 +20,17 @@
   flex: 1;
   padding: 1rem;
   overflow-y: auto;
+  max-width: 750px;
+  word-wrap: break-word;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  scroll-behavior: smooth;
 }
 
-.message {
-  max-width: 70%;
-  padding: 0.6rem 1rem;
-  border-radius: 1rem;
-  word-wrap: break-word;
+.messages.empty {
+  justify-content: center;
+  align-items: center;
 }
 
 .user {
@@ -72,4 +73,34 @@
   cursor: pointer;
   color: #d5bfd8;
   padding: 0.4rem;
+}
+.fallbackText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2rem;
+  text-align: center;
+  color: #555;
+  gap: 1rem;
+}
+
+.fallbackText h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.fallbackText p {
+  font-size: 1rem;
+  color: #666;
+  max-width: 300px;
+}
+
+.fallbackText img {
+  width: 180px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }

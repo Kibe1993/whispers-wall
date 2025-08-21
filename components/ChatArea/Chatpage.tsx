@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import styles from "./Chatpage.module.css";
 import { Send, Upload } from "lucide-react";
+import fallback from "../../public/WhispersLogo.png";
 import { useTopic } from "@/library/context/TopicContext";
-import { useUser } from "@clerk/nextjs"; // 👈 import Clerk hook
+import { useUser } from "@clerk/nextjs";
+import Image from "next/image";
 
 interface Message {
   _id?: string;
@@ -18,11 +20,17 @@ interface Message {
 
 export default function ChatPage() {
   const { activeTopic } = useTopic();
-  const { user } = useUser(); // 👈 Clerk user
+  const { user } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch existing messages when topic changes
+  // Scroll to bottom whenever messages update
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Fetch messages when topic changes and poll for new messages
   useEffect(() => {
     if (!activeTopic) return;
 
@@ -36,20 +44,15 @@ export default function ChatPage() {
     };
 
     fetchMessages();
+
+    const interval = setInterval(fetchMessages, 3000); // poll every 3s
+
+    return () => clearInterval(interval); // cleanup on unmount or topic change
   }, [activeTopic]);
 
   // Send new message
   const handleSend = async () => {
-    if (!input.trim()) {
-      console.warn("⚠️ Empty input, aborting");
-      return;
-    }
-    if (!activeTopic) {
-      return;
-    }
-    if (!user) {
-      return;
-    }
+    if (!input.trim() || !activeTopic || !user) return;
 
     const newMessage: Message = {
       message: input,
@@ -59,9 +62,7 @@ export default function ChatPage() {
     };
 
     try {
-      console.log("➡️ Posting to /api/messages with payload:", newMessage);
       const res = await axios.post("/api/messages", newMessage);
-
       setMessages((prev) => [...prev, res.data]); // append new message
       setInput(""); // clear input
     } catch (error) {
@@ -75,24 +76,39 @@ export default function ChatPage() {
         <h2>Whisper Anything About {activeTopic}</h2>
       </div>
 
-      <div className={styles.messages}>
-        {messages.map((msg, idx) => (
-          <div
-            key={msg._id || idx}
-            className={`${styles.message} ${
-              msg.clerkId === user?.id ? styles.user : styles.other
-            }`}
-          >
-            {msg.message}
+      <div
+        className={`${styles.messages} ${
+          messages.length === 0 ? styles.empty : ""
+        }`}
+      >
+        {messages.length === 0 ? (
+          <div className={styles.fallbackText}>
+            <h3>No whispers yet for "{activeTopic}"</h3>
+            <Image src={fallback} alt="Fallback Image" />
+            <p>
+              What is on your mind? With the most open community in the world
+            </p>
           </div>
-        ))}
+        ) : (
+          messages.map((msg, idx) => (
+            <div
+              key={msg._id || idx}
+              className={`${styles.message} ${
+                msg.clerkId === user?.id ? styles.user : styles.other
+              }`}
+            >
+              {msg.message}
+            </div>
+          ))
+        )}
+        {/* Dummy div for auto-scroll */}
+        <div ref={messagesEndRef} />
       </div>
 
       <form
         className={styles.inputBar}
         onSubmit={(e) => {
           e.preventDefault();
-
           handleSend();
         }}
       >
@@ -103,9 +119,7 @@ export default function ChatPage() {
           type="text"
           placeholder="Type your message..."
           value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-          }}
+          onChange={(e) => setInput(e.target.value)}
         />
         <button type="submit" className={styles.sendBtn}>
           <Send size={20} />

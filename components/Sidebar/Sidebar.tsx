@@ -11,6 +11,8 @@ import {
   useUser,
 } from "@clerk/nextjs";
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 const topics = [
   { name: "Life", whispers: 16, icon: "🌱" },
@@ -25,7 +27,18 @@ const topics = [
 
 export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
   const { activeTopic, setActiveTopic } = useTopic();
-  const user = useUser();
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const res = await axios.get("/api/counts");
+        setCounts(res.data);
+      } catch (err) {
+        console.error("Failed to fetch topic counts:", err);
+      }
+    };
+    fetchCounts();
+  }, []);
 
   return (
     <aside className={styles.sidebar}>
@@ -54,7 +67,10 @@ export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
                 <div className={styles.icon}>{topic.icon}</div>
                 <div>
                   <p className={styles.topicName}>{topic.name}</p>
-                  <p className={styles.whispers}>{topic.whispers} Whispers</p>
+                  {/* Use dynamic count with fallback to 0 */}
+                  <p className={styles.whispers}>
+                    {counts[topic.name] || 0} Whispers
+                  </p>
                 </div>
               </li>
             ))}
