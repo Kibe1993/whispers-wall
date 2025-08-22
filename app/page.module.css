@@ -6,3 +6,69 @@
   padding: 0;
   height: 100%;
 }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.card {
+  background: linear-gradient(145deg, #4f2f53, #5a0669);
+  color: #e7e2e2;
+  font-size: 18px;
+  padding: 2rem;
+  border-radius: 1rem;
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.signInBtn {
+  margin-top: 1rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  background: #45325c;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s ease;
+}
+
+.signInBtn:hover {
+  background: #6a4794;
+}
+
+/* 📱 Responsive Design */
+@media (max-width: 768px) {
+  .card {
+    width: 80%;
+    padding: 1.5rem;
+    font-size: 16px;
+  }
+
+  .signInBtn {
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card {
+    max-width: 95%;
+    padding: 1rem;
+    font-size: 14px;
+  }
+
+  .signInBtn {
+    width: 100%;
+    font-size: 14px;
+  }
+}
