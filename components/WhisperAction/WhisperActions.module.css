@@ -3,16 +3,18 @@
   padding: 0.25rem;
   border-radius: 6px;
   background-color: transparent;
-  min-width: 200px;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 400px; /* <- ensures it never gets too narrow */
+  box-sizing: border-box;
 }
 
 .actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 1rem; /* space from message text */
-  flex-wrap: wrap; /* let buttons wrap instead of overflowing */
+  margin-top: 1rem;
+  flex-wrap: wrap;
 }
 
 .actions button {
@@ -20,7 +22,7 @@
   border: none;
   cursor: pointer;
   font-size: 0.9rem;
-  color: #555;
+  color: #ccc3c3;
   padding: 2px 4px;
 }
 
@@ -51,10 +53,60 @@
 }
 
 .replies {
-  margin-top: 0.5rem;
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
   padding-left: 1rem;
   border-left: 2px solid #ddd;
   font-size: 0.9rem;
+}
+.messageWrapper {
+  width: 100%;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.editContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.editTextarea {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  padding: 8px;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+.editActions {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+}
+
+.saveBtn {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancelBtn {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 /* 🔹 Media Queries for responsiveness */
