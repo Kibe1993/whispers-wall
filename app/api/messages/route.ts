@@ -6,7 +6,6 @@ import { NextResponse } from "next/server";
 // Save a new message
 export async function POST(req: Request) {
   await connectDB();
-  console.log("✅ Database connected");
 
   const authResult = await auth();
 

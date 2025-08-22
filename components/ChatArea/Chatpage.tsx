@@ -1,21 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useTopic } from "@/library/context/TopicContext";
+import { useUser } from "@clerk/nextjs";
+import Pusher from "pusher-js";
 import axios from "axios";
 import styles from "./Chatpage.module.css";
 import { Send, Upload } from "lucide-react";
 import fallback from "../../public/WhispersLogo.png";
-import { useTopic } from "@/library/context/TopicContext";
-import { useUser } from "@clerk/nextjs";
 import Image from "next/image";
-
-interface Message {
-  _id?: string;
-  message: string;
-  topic: string;
-  clerkId?: string;
-  createdAt?: string;
-}
+import WhisperActions from "../WhisperAction/WhisperActions";
+import { Message } from "@/lib/interface/typescriptinterface";
 
 export default function ChatPage() {
   const { activeTopic } = useTopic();
@@ -25,24 +20,13 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
-  const [isAutoScroll, setIsAutoScroll] = useState(true);
 
   // Auto-scroll effect
   useEffect(() => {
-    if (isAutoScroll) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, isAutoScroll]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-  // Detect user scroll
-  const handleScroll = () => {
-    if (!messagesContainerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } =
-      messagesContainerRef.current;
-    setIsAutoScroll(scrollTop + clientHeight >= scrollHeight - 10);
-  };
-
-  // Fetch messages and poll
+  // Fetch initial messages when topic changes
   useEffect(() => {
     if (!activeTopic) return;
 
@@ -50,16 +34,35 @@ export default function ChatPage() {
       try {
         const res = await axios.get(`/api/messages?topic=${activeTopic}`);
         setMessages(res.data);
-      } catch (error) {
-        console.error("❌ Error fetching messages:", error);
+      } catch (err) {
+        console.error("Failed to fetch messages:", err);
       }
     };
 
     fetchMessages();
-    const interval = setInterval(fetchMessages, 3000);
 
-    return () => clearInterval(interval);
+    // Pusher setup
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    });
+    const channel = pusher.subscribe(`topic-${activeTopic}`);
+    channel.bind("new-message", (message: Message) => {
+      setMessages((prev) => [...prev, message]);
+    });
+
+    return () => {
+      channel.unbind_all();
+      channel.unsubscribe();
+    };
   }, [activeTopic]);
+
+  // Detect user scroll
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } =
+      messagesContainerRef.current;
+    // optional: handle auto-scroll toggle
+  };
 
   // Send message
   const handleSend = async () => {
@@ -75,8 +78,8 @@ export default function ChatPage() {
       const res = await axios.post("/api/messages", newMessage);
       setMessages((prev) => [...prev, res.data]);
       setInput("");
-    } catch (error) {
-      console.error("❌ Error sending message:", error);
+    } catch (err) {
+      console.error("Failed to send message:", err);
     }
   };
 
@@ -111,7 +114,23 @@ export default function ChatPage() {
                   isUser ? styles.user : styles.other
                 }`}
               >
-                {msg.message}
+                {/* WhisperActions renders the message and actions */}
+                <WhisperActions
+                  _id={msg._id}
+                  message={msg.message}
+                  clerkId={msg.clerkId}
+                  likes={msg.likes || []}
+                  dislikes={msg.dislikes || []}
+                  replies={msg.replies || []}
+                  topic={msg.topic}
+                  onUpdate={(updatedMsg) => {
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m._id === updatedMsg._id ? updatedMsg : m
+                      )
+                    );
+                  }}
+                />
               </div>
             );
           })

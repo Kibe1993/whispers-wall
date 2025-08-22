@@ -60,8 +60,10 @@ export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
                   activeTopic === topic.name ? styles.active : ""
                 }`}
                 onClick={() => {
-                  setActiveTopic(topic.name);
-                  onLinkClick?.();
+                  if (activeTopic !== topic.name) {
+                    setActiveTopic(topic.name);
+                    onLinkClick?.();
+                  }
                 }}
               >
                 <div className={styles.icon}>{topic.icon}</div>
