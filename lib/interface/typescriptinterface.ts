@@ -15,21 +15,22 @@ export interface Message {
   }[];
 }
 
-export interface Reply {
+interface Reply {
   _id?: string;
   message: string;
-  clerkId: string;
-  createdAt: string;
+  clerkId?: string;
+  createdAt?: string;
+  userName?: string;
 }
 
 export interface WhisperProps {
   _id?: string;
   message: string;
   clerkId?: string;
-  likes: any[];
-  dislikes: any[];
-  replies: any[];
+  likes: string[];
+  dislikes: string[];
+  replies: Reply[];
   topic?: string;
-  onUpdate: (updatedMsg: any) => void;
-  isUser?: boolean; // <-- add this
+  onUpdate: (updatedMsg: Message) => void;
+  isUser?: boolean;
 }

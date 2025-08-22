@@ -98,7 +98,7 @@ export default function ChatPage() {
       >
         {messages.length === 0 ? (
           <div className={styles.fallbackText}>
-            <h3>No whispers yet for "{activeTopic}"</h3>
+            <h3>No whispers yet for {activeTopic}</h3>
             <Image src={fallback} alt="Fallback Image" />
             <p>
               What is on your mind? With the most open community in the world
