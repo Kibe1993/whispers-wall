@@ -122,7 +122,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
       {/* Meta row */}
       <div className={styles.meta}>
         <span className={styles.username}>
-          @{clerkId?.slice(0, 6) || "anon"}
+          @{clerkId?.slice(0, 10) || "anon"}
         </span>
         <span className={styles.dot}>·</span>
         <span className={styles.timestamp}>{relativeTime}</span>
