@@ -4,12 +4,16 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import axios from "axios";
 import styles from "./WhisperActions.module.css";
-import { WhisperProps, Reply } from "@/lib/interface/typescriptinterface";
+import {
+  WhisperProps,
+  Reply,
+  Message,
+} from "@/lib/interface/typescriptinterface";
 import { formatDistanceToNow } from "date-fns";
 
 interface WhisperActionsProps extends WhisperProps {
   rootId?: string; // ✅ optional, auto-resolved if missing
-  onUpdate: (msg: any) => void;
+  onUpdate: (msg: Message) => void;
 }
 
 export default function WhisperActions(props: WhisperActionsProps) {

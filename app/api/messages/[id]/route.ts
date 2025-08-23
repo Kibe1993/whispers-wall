@@ -1,4 +1,5 @@
 import { connectDB } from "@/lib/DB/connectDB";
+import { Reply } from "@/lib/interface/typescriptinterface";
 import MessageModel from "@/lib/Models/message";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
@@ -29,7 +30,7 @@ export async function PATCH(req: NextRequest, context: unknown) {
 
     if (parentReplyId) {
       // recursive search for the reply
-      const updateReply = (replies: any[]): boolean => {
+      const updateReply = (replies: Reply[]): boolean => {
         for (const r of replies) {
           if (r._id.toString() === parentReplyId) {
             if (r.clerkId !== userId) {

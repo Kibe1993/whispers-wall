@@ -1,9 +1,10 @@
 import { connectDB } from "@/lib/DB/connectDB";
 import MessageModel from "@/lib/Models/message";
 import { NextRequest, NextResponse } from "next/server";
+import { Reply } from "@/lib/interface/typescriptinterface";
 
 // recursive helper
-function findReplyById(replies: any[], id: string): any | null {
+function findReplyById(replies: Reply[], id: string): Reply | null {
   for (const reply of replies) {
     if (reply._id.toString() === id) {
       return reply;
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest, context: unknown) {
 
     await message.save();
     return NextResponse.json(message, { status: 200 });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: "Failed to update dislike" },
       { status: 500 }
