@@ -1,6 +1,7 @@
 .layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh; /* ✅ lock to viewport height */
+  overflow: hidden; /* ✅ prevent page scrollbar */
 }
 
 /* Sidebar wrapper (mobile: hidden, desktop: shown) */
@@ -35,11 +36,13 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%; /* ✅ fill parent */
   z-index: 10;
 }
 
 .content {
   flex: 1;
+  overflow-y: auto; /* ✅ scrolls only inside here */
   padding: 1rem;
 }
 
