@@ -1,36 +1,35 @@
 // types/message.ts
-export interface Message {
-  _id?: string;
+export interface Reply {
+  _id: string;
+  clerkId: string;
   message: string;
-  topic: string;
-  clerkId?: string;
   createdAt?: string;
-  likes?: string[]; // or a type representing who liked
-  dislikes?: string[]; // same here
-  replies?: {
-    _id?: string;
-    message: string;
-    clerkId?: string;
-    createdAt?: string;
-  }[];
+  likes: string[];
+  dislikes: string[];
+  replies: Reply[];
 }
 
-interface Reply {
-  _id?: string;
+export interface Message {
+  _id: string;
   message: string;
-  clerkId?: string;
-  createdAt?: string;
-  userName?: string;
+  topic: string;
+  clerkId: string;
+  createdAt: string;
+  likes: string[];
+  dislikes: string[];
+  replies: Reply[];
 }
 
 export interface WhisperProps {
-  _id?: string;
+  _id: string;
   message: string;
-  clerkId?: string;
+  clerkId: string;
   likes: string[];
   dislikes: string[];
   replies: Reply[];
   topic?: string;
+  createdAt?: string;
   onUpdate: (updatedMsg: Message) => void;
   isUser?: boolean;
+  rootId?: string;
 }

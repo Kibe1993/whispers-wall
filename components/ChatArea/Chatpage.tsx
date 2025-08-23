@@ -68,7 +68,7 @@ export default function ChatPage() {
   const handleSend = async () => {
     if (!input.trim() || !activeTopic || !user) return;
 
-    const newMessage: Message = {
+    const newMessage = {
       message: input,
       topic: activeTopic,
       clerkId: user.id,
@@ -123,6 +123,7 @@ export default function ChatPage() {
                   dislikes={msg.dislikes || []}
                   replies={msg.replies || []}
                   topic={msg.topic}
+                  createdAt={msg.createdAt}
                   onUpdate={(updatedMsg) => {
                     setMessages((prev) =>
                       prev.map((m) =>

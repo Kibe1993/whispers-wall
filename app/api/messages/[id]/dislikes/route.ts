@@ -1,45 +1,68 @@
 import { connectDB } from "@/lib/DB/connectDB";
 import MessageModel from "@/lib/Models/message";
-import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+
+// recursive helper
+function findReplyById(replies: any[], id: string): any | null {
+  for (const reply of replies) {
+    if (reply._id.toString() === id) {
+      return reply;
+    }
+    const found = findReplyById(reply.replies || [], id);
+    if (found) return found;
+  }
+  return null;
+}
 
 export async function POST(req: NextRequest, context: unknown) {
   const { params } = context as { params: { id: string } };
+  const { id } = params;
   await connectDB();
 
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
-    const { id } = params;
-    const action = "dislike";
+    const { parentId, clerkId } = await req.json();
 
-    let updateQuery = {};
-
-    if (action === "dislike") {
-      updateQuery = {
-        $addToSet: { dislikes: userId },
-      };
-    } else {
-      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    if (!clerkId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const updated = await MessageModel.findByIdAndUpdate(id, updateQuery, {
-      new: true,
-    });
-
-    if (!updated) {
+    const message = await MessageModel.findById(parentId || id);
+    if (!message) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
 
-    return NextResponse.json(updated, { status: 200 });
+    if (!parentId || id === parentId) {
+      // Dislike on ROOT message
+      if (message.dislikes.includes(clerkId)) {
+        message.dislikes = message.dislikes.filter(
+          (uid: string) => uid !== clerkId
+        );
+      } else {
+        message.dislikes.push(clerkId);
+        message.likes = message.likes.filter((uid: string) => uid !== clerkId);
+      }
+    } else {
+      // Dislike on REPLY
+      const reply = findReplyById(message.replies, id);
+      if (!reply) {
+        return NextResponse.json({ error: "Reply not found" }, { status: 404 });
+      }
+
+      if (reply.dislikes.includes(clerkId)) {
+        reply.dislikes = reply.dislikes.filter(
+          (uid: string) => uid !== clerkId
+        );
+      } else {
+        reply.dislikes.push(clerkId);
+        reply.likes = reply.likes.filter((uid: string) => uid !== clerkId);
+      }
+    }
+
+    await message.save();
+    return NextResponse.json(message, { status: 200 });
   } catch (error) {
-    console.error("❌ Error updating like/dislike:", error);
     return NextResponse.json(
-      { error: "Failed to update like/dislike" },
+      { error: "Failed to update dislike" },
       { status: 500 }
     );
   }

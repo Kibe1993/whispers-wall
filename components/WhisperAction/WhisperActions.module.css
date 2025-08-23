@@ -1,138 +1,194 @@
 .whisperContainer {
-  margin: 0.25rem 0;
-  padding: 0.25rem;
-  border-radius: 6px;
-  background-color: transparent;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  min-width: 400px; /* <- ensures it never gets too narrow */
-  box-sizing: border-box;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  font-family: system-ui, sans-serif;
+  color: #e7e2e2; /* soft text */
 }
 
+/* Meta row */
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #aaa;
+  margin-bottom: 0.25rem;
+}
+.username {
+  font-weight: 600;
+  font-size: 12px;
+  color: #b79be7; /* lavender accent */
+}
+.dot {
+  margin: 0 2px;
+}
+.timestamp {
+  color: #aaa;
+  font-size: 12px;
+}
+
+/* Message */
+.messageText {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0.25rem 0;
+  color: #fff; /* main text brighter */
+  word-break: break-word;
+}
+
+/* Actions */
 .actions {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-top: 0.4rem;
 }
-
 .actions button {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 0.9rem;
-  color: #ccc3c3;
-  padding: 2px 4px;
+  font-size: 0.85rem;
+  color: #bbb; /* muted */
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s ease-in-out;
 }
-
 .actions button:hover {
-  color: #000;
+  color: #b48ef7; /* purple hover */
 }
 
+/* Reply input */
 .replyInput {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.25rem;
+  margin-top: 0.35rem;
 }
-
 .replyInput input {
   flex: 1;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
 }
-
+.replyInput input::placeholder {
+  color: #aaa;
+}
+.replyInput input:focus {
+  outline: none;
+  border-color: #b48ef7;
+}
 .replyInput button {
-  padding: 0.25rem 0.5rem;
+  padding: 0.35rem 0.9rem;
   border: none;
-  border-radius: 4px;
-  background-color: #0070f3;
-  color: white;
+  border-radius: 9999px;
+  background-color: #b48ef7;
+  color: #fff;
   cursor: pointer;
+  font-size: 0.85rem;
+}
+.replyInput button:hover {
+  background-color: #9a6fd6;
 }
 
+/* Replies thread */
 .replies {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
+  border-left: 2px solid rgba(255, 255, 255, 0.1);
+  padding-left: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  padding-left: 1rem;
-  border-left: 2px solid #ddd;
-  font-size: 0.9rem;
+  gap: 0.25rem;
 }
-.messageWrapper {
-  width: 100%;
-  min-width: 0;
-  flex-shrink: 0;
+.replyWrapper {
+  padding: 0.25rem 0;
 }
 
+/* Edit state */
 .editContainer {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-bottom: 8px;
-  width: 100%;
 }
-
 .editTextarea {
   width: 100%;
-  min-height: 80px;
+  min-height: 60px;
   resize: vertical;
   padding: 8px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   border-radius: 6px;
-  border: 1px solid #ccc;
-  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.editTextarea:focus {
+  outline: none;
+  border-color: #b48ef7;
 }
 .editActions {
   display: flex;
-  width: 100%;
   gap: 8px;
 }
-
 .saveBtn {
-  background-color: #4caf50;
+  background-color: #b48ef7; /* purple save */
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
+  padding: 4px 12px;
+  border-radius: 9999px;
   cursor: pointer;
 }
-
+.saveBtn:hover {
+  background-color: #9a6fd6;
+}
 .cancelBtn {
-  background-color: #f44336;
+  background-color: #f05454; /* warm red */
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
+  padding: 4px 12px;
+  border-radius: 9999px;
   cursor: pointer;
 }
+.cancelBtn:hover {
+  background-color: #d94343;
+}
 
-/* 🔹 Media Queries for responsiveness */
+/* Mobile tweaks */
 @media (max-width: 600px) {
-  .whisperContainer {
-    min-width: 200px; /* reduce minimum width on smaller screens */
+  .messageText {
+    font-size: 12px;
+  }
+  .actions {
+    gap: 1rem;
+  }
+}
+@media (max-width: 600px) {
+  .messageText {
+    font-size: 12px;
   }
 
   .actions {
-    flex-direction: r; /* stack buttons vertically */
-    align-items: flex-start;
-    gap: 0.1rem;
+    gap: 0.75rem;
   }
 
   .actions button {
-    font-size: 0.85rem;
-    padding: 4px 6px;
+    font-size: 0.7rem;
+    gap: 2px;
+  }
+
+  .actions button svg {
+    width: 14px;
+    height: 14px;
   }
 
   .replyInput input {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
   }
-}
 
-@media (min-width: 1200px) {
-  .whisperContainer {
-    max-width: 800px; /* widen on large screens */
+  .replyInput button {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
   }
 }
