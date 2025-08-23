@@ -24,6 +24,11 @@
   flex-direction: column;
   gap: 0.5rem;
   scroll-behavior: smooth;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.messages::-webkit-scrollbar {
+  display: none;
 }
 
 .message {
