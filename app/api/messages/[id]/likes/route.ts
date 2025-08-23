@@ -1,9 +1,10 @@
 import { connectDB } from "@/lib/DB/connectDB";
+import { Reply } from "@/lib/interface/typescriptinterface";
 import MessageModel from "@/lib/Models/message";
 import { NextRequest, NextResponse } from "next/server";
 
 // recursive helper
-function findReplyById(replies: any[], id: string): any | null {
+function findReplyById(replies: Reply[], id: string): Reply | null {
   for (const reply of replies) {
     if (reply._id.toString() === id) {
       return reply;
