@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/DB/connectDB";
 import MessageModel from "@/lib/Models/message";
 import { NextRequest, NextResponse } from "next/server";
 import { Reply } from "@/lib/interface/typescriptinterface";
+import { pusher } from "@/lib/Pusher/pusher";
 
 // recursive helper
 function findReplyById(replies: Reply[], id: string): Reply | null {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest, context: unknown) {
     }
 
     if (!parentId || id === parentId) {
-      // Dislike on ROOT message
+      // 👎 Dislike on ROOT message
       if (message.dislikes.includes(clerkId)) {
         message.dislikes = message.dislikes.filter(
           (uid: string) => uid !== clerkId
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest, context: unknown) {
         message.likes = message.likes.filter((uid: string) => uid !== clerkId);
       }
     } else {
-      // Dislike on REPLY
+      // 👎 Dislike on REPLY
       const reply = findReplyById(message.replies, id);
       if (!reply) {
         return NextResponse.json({ error: "Reply not found" }, { status: 404 });
@@ -59,9 +60,18 @@ export async function POST(req: NextRequest, context: unknown) {
       }
     }
 
-    await message.save();
-    return NextResponse.json(message, { status: 200 });
-  } catch (_error) {
+    const savedMsg = await message.save();
+
+    // ✅ Broadcast update via Pusher
+    await pusher.trigger(
+      `topic-${message.topic}`, // channel
+      "update-message", // event
+      savedMsg // payload
+    );
+
+    return NextResponse.json(savedMsg, { status: 200 });
+  } catch (error) {
+    console.error("❌ Error updating dislike:", error);
     return NextResponse.json(
       { error: "Failed to update dislike" },
       { status: 500 }

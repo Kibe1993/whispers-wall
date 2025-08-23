@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/DB/connectDB";
 import MessageModel from "@/lib/Models/message";
+import { pusher } from "@/lib/Pusher/pusher";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
@@ -7,27 +8,30 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   await connectDB();
 
-  const authResult = await auth();
-
-  const { userId } = authResult || {};
-
-  const body = await req.json();
-
-  const { message, topic } = body;
+  const { userId } = await auth();
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
+    const body = await req.json();
+    const { message, topic } = body;
+
     const newMessage = await MessageModel.create({
       message,
       topic,
       clerkId: userId,
+      likes: [],
+      dislikes: [],
+      replies: [],
       createdAt: new Date(),
     });
 
-    return NextResponse.json(newMessage);
+    // 👇 Trigger Pusher so all subscribed clients receive this
+    await pusher.trigger(`topic-${topic}`, "new-message", newMessage);
+
+    return NextResponse.json(newMessage, { status: 201 });
   } catch (error) {
     console.error("❌ Error creating message:", error);
     return NextResponse.json(

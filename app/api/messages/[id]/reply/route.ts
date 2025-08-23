@@ -4,6 +4,7 @@ import MessageModel from "@/lib/Models/message";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { Reply } from "@/lib/interface/typescriptinterface";
+import { pusher } from "@/lib/Pusher/pusher";
 
 export async function POST(req: NextRequest, context: unknown) {
   const { params } = context as { params: { id: string } };
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest, context: unknown) {
       likes: [],
       dislikes: [],
       replies: [],
-      createdAt: new Date().toISOString(), // ✅ string
+      createdAt: new Date().toISOString(),
     };
 
     if (parentReplyId) {
@@ -62,6 +63,14 @@ export async function POST(req: NextRequest, context: unknown) {
     }
 
     const savedMsg = await msg.save();
+
+    // ✅ Trigger Pusher so all clients update in real time
+    await pusher.trigger(
+      `topic-${msg.topic}`, // channel
+      "update-message", // event name
+      savedMsg // full updated message
+    );
+
     return NextResponse.json(savedMsg, { status: 200 });
   } catch (err) {
     console.error("❌ Error adding reply:", err);

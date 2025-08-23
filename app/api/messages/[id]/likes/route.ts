@@ -1,9 +1,10 @@
 import { connectDB } from "@/lib/DB/connectDB";
 import { Reply } from "@/lib/interface/typescriptinterface";
 import MessageModel from "@/lib/Models/message";
+import { pusher } from "@/lib/Pusher/pusher";
 import { NextRequest, NextResponse } from "next/server";
 
-// recursive helper
+// recursive helper to find a reply by ID
 function findReplyById(replies: Reply[], id: string): Reply | null {
   for (const reply of replies) {
     if (reply._id.toString() === id) {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest, context: unknown) {
     }
 
     if (!parentId || id === parentId) {
-      // Like on ROOT message
+      // 👍 Like on ROOT message
       if (message.likes.includes(clerkId)) {
         message.likes = message.likes.filter((uid: string) => uid !== clerkId);
       } else {
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest, context: unknown) {
         );
       }
     } else {
-      // Like on REPLY
+      // 👍 Like on REPLY
       const reply = findReplyById(message.replies, id);
       if (!reply) {
         return NextResponse.json({ error: "Reply not found" }, { status: 404 });
@@ -59,9 +60,18 @@ export async function POST(req: NextRequest, context: unknown) {
       }
     }
 
-    await message.save();
-    return NextResponse.json(message, { status: 200 });
+    const savedMsg = await message.save();
+
+    // ✅ Broadcast updated message via Pusher
+    await pusher.trigger(
+      `topic-${message.topic}`, // channel
+      "update-message", // event
+      savedMsg // payload
+    );
+
+    return NextResponse.json(savedMsg, { status: 200 });
   } catch (error) {
+    console.error("❌ Error updating like:", error);
     return NextResponse.json(
       { error: "Failed to update like" },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/DB/connectDB";
 import { Reply } from "@/lib/interface/typescriptinterface";
 import MessageModel from "@/lib/Models/message";
+import { pusher } from "@/lib/Pusher/pusher";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -60,6 +61,11 @@ export async function PATCH(req: NextRequest, context: unknown) {
 
       msg.message = message;
       const savedMsg = await msg.save();
+      await pusher.trigger(
+        `topic-${message.topic}`, // channel
+        "update-message", // event
+        savedMsg // payload
+      );
       return NextResponse.json(savedMsg, { status: 200 });
     }
   } catch (error) {

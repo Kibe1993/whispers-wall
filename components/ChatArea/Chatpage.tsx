@@ -10,7 +10,29 @@ import { Send, Upload } from "lucide-react";
 import fallback from "../../public/WhispersLogo.png";
 import Image from "next/image";
 import WhisperActions from "../WhisperAction/WhisperActions";
-import { Message } from "@/lib/interface/typescriptinterface";
+import { Message, Reply } from "@/lib/interface/typescriptinterface";
+
+// 🔄 Utility to deeply update replies (recursive)
+function updateRepliesRecursively(replies: Reply[], updated: Message): Reply[] {
+  return replies.map((r) =>
+    r._id === updated._id
+      ? { ...r, ...updated }
+      : { ...r, replies: updateRepliesRecursively(r.replies || [], updated) }
+  );
+}
+
+// 🔄 Replace or merge an updated message into the tree
+function mergeUpdatedMessage(messages: Message[], updated: Message) {
+  return messages.map((m) => {
+    if (m._id === updated._id) {
+      return { ...m, ...updated }; // root message updated
+    }
+    return {
+      ...m,
+      replies: updateRepliesRecursively(m.replies || [], updated),
+    };
+  });
+}
 
 export default function ChatPage() {
   const { activeTopic } = useTopic();
@@ -26,7 +48,7 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Fetch initial messages when topic changes
+  // Fetch & subscribe to Pusher
   useEffect(() => {
     if (!activeTopic) return;
 
@@ -35,33 +57,42 @@ export default function ChatPage() {
         const res = await axios.get(`/api/messages?topic=${activeTopic}`);
         setMessages(res.data);
       } catch (err) {
-        console.error("Failed to fetch messages:", err);
+        console.error("❌ Failed to fetch messages:", err);
       }
     };
 
     fetchMessages();
 
-    // Pusher setup
+    // ✅ Setup Pusher
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
     });
+
     const channel = pusher.subscribe(`topic-${activeTopic}`);
+
+    // New messages (root only)
     channel.bind("new-message", (message: Message) => {
       setMessages((prev) => [...prev, message]);
+    });
+
+    // Updates (likes, edits, replies, dislikes, etc.)
+    channel.bind("update-message", (updatedMsg: Message) => {
+      setMessages((prev) => mergeUpdatedMessage(prev, updatedMsg));
     });
 
     return () => {
       channel.unbind_all();
       channel.unsubscribe();
+      pusher.disconnect();
     };
   }, [activeTopic]);
 
-  // Detect user scroll
+  // Detect user scroll (optional)
   const handleScroll = () => {
     if (!messagesContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } =
       messagesContainerRef.current;
-    // optional: handle auto-scroll toggle
+    // optional: could toggle auto-scroll here
   };
 
   // Send message
@@ -75,11 +106,11 @@ export default function ChatPage() {
     };
 
     try {
-      const res = await axios.post("/api/messages", newMessage);
-      setMessages((prev) => [...prev, res.data]);
+      // ✅ Don’t update state here — Pusher will handle inserting
+      await axios.post("/api/messages", newMessage);
       setInput("");
     } catch (err) {
-      console.error("Failed to send message:", err);
+      console.error("❌ Failed to send message:", err);
     }
   };
 
@@ -114,7 +145,6 @@ export default function ChatPage() {
                   isUser ? styles.user : styles.other
                 }`}
               >
-                {/* WhisperActions renders the message and actions */}
                 <WhisperActions
                   _id={msg._id}
                   message={msg.message}
@@ -126,9 +156,7 @@ export default function ChatPage() {
                   createdAt={msg.createdAt}
                   onUpdate={(updatedMsg) => {
                     setMessages((prev) =>
-                      prev.map((m) =>
-                        m._id === updatedMsg._id ? updatedMsg : m
-                      )
+                      mergeUpdatedMessage(prev, updatedMsg)
                     );
                   }}
                 />
@@ -139,6 +167,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Input bar */}
       <form
         className={styles.inputBar}
         onSubmit={(e) => {
