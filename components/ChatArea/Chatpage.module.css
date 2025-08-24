@@ -40,6 +40,8 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 .messages.empty {
+  flex: 1;
+  display: flex;
   justify-content: center;
   align-items: center;
 }
@@ -91,10 +93,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-top: 2rem;
   text-align: center;
   color: #555;
   gap: 1rem;
+  height: 100%;
+  margin: 0;
 }
 
 .fallbackText h3 {
@@ -133,7 +136,7 @@
   }
 
   .message {
-    max-width: 80%;
+    max-width: 85%;
     padding: 0.6rem 0.8rem;
     font-size: 0.9rem;
   }
@@ -163,5 +166,18 @@
 
   .fallbackText img {
     width: 140px;
+  }
+  .user {
+    align-self: flex-end;
+    margin-right: 0.5rem;
+  }
+
+  .other {
+    align-self: flex-start;
+    margin-left: 0.5rem;
+  }
+  .fallbackText {
+    justify-content: flex-start;
+    margin-top: 4rem;
   }
 }
