@@ -148,14 +148,14 @@
   }
 
   .message {
-    max-width: 90%;
+    max-width: 85%;
     padding: 0.6rem 0.8rem;
     font-size: 0.9rem;
     margin: 0 1rem;
   }
 
   .inputBar {
-    margin: 1rem;
+    margin: auto;
     width: calc(100% - 2rem);
     padding: 0.5rem 0.75rem;
     gap: 0.4rem;
@@ -174,12 +174,12 @@
 
   .user {
     align-self: flex-end;
-    margin-right: 0.5rem;
+    margin-right: 1rem;
   }
 
   .other {
     align-self: flex-start;
-    margin-left: 0.5rem;
+    margin-left: 1rem;
   }
 
   .fallbackText {
