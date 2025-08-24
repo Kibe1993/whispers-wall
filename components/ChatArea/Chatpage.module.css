@@ -143,12 +143,12 @@
   }
 
   .messages {
-    padding: 0.5rem;
+    padding: 1rem;
     gap: 0.4rem;
   }
 
   .message {
-    max-width: 85%;
+    max-width: 90%;
     padding: 0.6rem 0.8rem;
     font-size: 0.9rem;
     margin: 0 1rem;
