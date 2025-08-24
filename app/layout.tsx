@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import ResponsiveLayout from "@/components/wrapper/ResponsiveLayout";
 import { ClerkProvider } from "@clerk/nextjs";
@@ -8,12 +8,18 @@ export const metadata: Metadata = {
   description: "Created by WebDev",
 };
 
+// ✅ Add this
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // client component handling sidebar toggle
   return (
     <ClerkProvider>
       <html lang="en">
