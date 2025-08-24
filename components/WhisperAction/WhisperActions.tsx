@@ -12,8 +12,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 
 interface WhisperActionsProps extends WhisperProps {
-  rootId?: string; // ✅ optional, auto-resolved if missing
-  onUpdate: (msg: Message) => void;
+  rootId?: string;
 }
 
 export default function WhisperActions(props: WhisperActionsProps) {
@@ -27,12 +26,11 @@ export default function WhisperActions(props: WhisperActionsProps) {
     createdAt,
     topic,
     onUpdate,
+    onDelete,
     rootId: rootIdFromParent,
   } = props;
 
   const { user } = useUser();
-
-  // ✅ Normalize rootId: if not passed, use own _id
   const rootId = rootIdFromParent || _id;
 
   const [showReplies, setShowReplies] = useState(false);
@@ -44,7 +42,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
 
   const isAuthor = clerkId === user?.id;
 
-  // 🕒 Relative time updater
+  // 🕒 update relative time
   useEffect(() => {
     if (!createdAt) return;
     const updateTime = () => {
@@ -62,7 +60,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
     if (!user) return;
     try {
       const res = await axios.post(`/api/messages/${_id}/likes`, {
-        clerkId: user.id, // ✅ use Clerk ID
+        clerkId: user.id,
         parentId: rootId,
       });
       onUpdate(res.data);
@@ -76,7 +74,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
     if (!user) return;
     try {
       const res = await axios.post(`/api/messages/${_id}/dislikes`, {
-        clerkId: user.id, // ✅ use Clerk ID
+        clerkId: user.id,
         parentId: rootId,
       });
       onUpdate(res.data);
@@ -85,20 +83,21 @@ export default function WhisperActions(props: WhisperActionsProps) {
     }
   };
 
+  // 💬 Reply
   const handleReply = async () => {
     if (!user || !replyInput.trim()) return;
     try {
       const res = await axios.post(`/api/messages/${rootId}/reply`, {
         message: replyInput,
         clerkId: user.id,
-        parentReplyId: _id !== rootId ? _id : null, // ✅ reply to the actual parent, not always root
+        parentReplyId: _id !== rootId ? _id : null,
       });
       setReplyInput("");
       setShowReplyInput(false);
       setShowReplies(true);
       onUpdate(res.data);
     } catch (err) {
-      console.error("❌ Failed to post reply:", err);
+      console.error("❌ Failed to reply:", err);
     }
   };
 
@@ -113,7 +112,25 @@ export default function WhisperActions(props: WhisperActionsProps) {
       onUpdate(res.data);
       setIsEditing(false);
     } catch (err) {
-      console.error("❌ Failed to edit message:", err);
+      console.error("❌ Failed to edit:", err);
+    }
+  };
+
+  // 🗑️ Delete
+  const handleDelete = async () => {
+    if (!user) return;
+    const confirmDelete = confirm(
+      "Are you sure you want to delete this whisper and all its replies?"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await axios.delete(`/api/messages/${_id}`, {
+        data: { parentId: rootId },
+      });
+      onDelete(_id, rootId);
+    } catch (err) {
+      console.error("❌ Failed to delete:", err);
     }
   };
 
@@ -165,7 +182,10 @@ export default function WhisperActions(props: WhisperActionsProps) {
         <button onClick={handleLike}>❤️ {likes.length}</button>
         <button onClick={handleDislike}>👎 {dislikes.length}</button>
         {isAuthor && !isEditing && (
-          <button onClick={() => setIsEditing(true)}>✏️ Edit</button>
+          <>
+            <button onClick={() => setIsEditing(true)}>✏️ Edit</button>
+            <button onClick={handleDelete}>🗑️ Delete</button>
+          </>
         )}
       </div>
 
@@ -203,7 +223,8 @@ export default function WhisperActions(props: WhisperActionsProps) {
               createdAt={r.createdAt}
               topic={topic}
               onUpdate={onUpdate}
-              rootId={rootId} // ✅ always pass down normalized rootId
+              onDelete={onDelete} // ✅ pass down
+              rootId={rootId}
             />
           ))}
         </div>

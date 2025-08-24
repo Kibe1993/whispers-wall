@@ -34,6 +34,16 @@ function mergeUpdatedMessage(messages: Message[], updated: Message) {
   });
 }
 
+// 🔄 Recursively remove a reply by ID
+function removeReplyRecursively(replies: Reply[], id: string): Reply[] {
+  return replies
+    .filter((r) => r._id !== id)
+    .map((r) => ({
+      ...r,
+      replies: removeReplyRecursively(r.replies || [], id),
+    }));
+}
+
 export default function ChatPage() {
   const { activeTopic } = useTopic();
   const { user } = useUser();
@@ -79,6 +89,25 @@ export default function ChatPage() {
     channel.bind("update-message", (updatedMsg: Message) => {
       setMessages((prev) => mergeUpdatedMessage(prev, updatedMsg));
     });
+
+    // Deletions (root or nested)
+    channel.bind(
+      "delete-message",
+      (data: { id: string; parentId: string | null }) => {
+        setMessages((prev) => {
+          if (!data.parentId) {
+            // Case 1: root whisper deletion
+            return prev.filter((m) => m._id !== data.id);
+          }
+
+          // Case 2: nested reply deletion
+          return prev.map((m) => ({
+            ...m,
+            replies: removeReplyRecursively(m.replies || [], data.id),
+          }));
+        });
+      }
+    );
 
     return () => {
       channel.unbind_all();
@@ -158,6 +187,17 @@ export default function ChatPage() {
                     setMessages((prev) =>
                       mergeUpdatedMessage(prev, updatedMsg)
                     );
+                  }}
+                  onDelete={(id, parentId) => {
+                    setMessages((prev) => {
+                      if (!parentId) {
+                        return prev.filter((m) => m._id !== id); // ✅ root delete
+                      }
+                      return prev.map((m) => ({
+                        ...m,
+                        replies: removeReplyRecursively(m.replies || [], id), // ✅ reply delete
+                      }));
+                    });
                   }}
                 />
               </div>

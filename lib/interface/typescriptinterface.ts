@@ -29,7 +29,8 @@ export interface WhisperProps {
   replies: Reply[];
   topic?: string;
   createdAt?: string;
-  onUpdate: (updatedMsg: Message) => void;
-  isUser?: boolean;
   rootId?: string;
+  isUser?: boolean;
+  onUpdate: (updatedMsg: Message) => void;
+  onDelete: (id: string, parentId?: string | null) => void; // ✅ now required
 }
