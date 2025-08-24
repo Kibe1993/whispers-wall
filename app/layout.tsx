@@ -8,11 +8,11 @@ export const metadata: Metadata = {
   description: "Created by WebDev",
 };
 
-// ✅ Add this
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
