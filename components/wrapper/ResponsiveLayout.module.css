@@ -1,10 +1,9 @@
 .layout {
   display: flex;
-  height: 100vh; /* ✅ lock to viewport height */
-  overflow: hidden; /* ✅ prevent page scrollbar */
+  height: 100vh;
+  overflow: hidden;
 }
 
-/* Sidebar wrapper (mobile: hidden, desktop: shown) */
 .sidebarWrapper {
   position: fixed;
   top: 0;
@@ -23,7 +22,6 @@
   transform: translateX(0);
 }
 
-/* Show sidebar by default on medium+ screens */
 @media (min-width: 768px) {
   .sidebarWrapper {
     position: relative;
@@ -31,22 +29,20 @@
   }
 }
 
-/* Main content */
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%; /* ✅ fill parent */
+  height: 100%;
   z-index: 10;
 }
 
 .content {
   flex: 1;
-  overflow-y: auto; /* ✅ scrolls only inside here */
+  overflow-y: auto;
   padding: 1rem;
 }
 
-/* Overlay when sidebar is open (mobile only) */
 .overlay {
   position: fixed;
   inset: 0;

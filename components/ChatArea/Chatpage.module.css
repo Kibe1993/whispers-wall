@@ -63,31 +63,38 @@
 .inputBar {
   display: flex;
   align-items: center;
-  padding: 1.5rem;
+  padding: 0.75rem 1rem;
   border-radius: 50px;
   background: #481a50;
   border-top: 1px solid #7d6281;
   gap: 0.5rem;
-  flex-shrink: 0; /* keep it pinned */
+  flex-shrink: 0;
 }
 
 .inputBar input {
   flex: 1;
+  min-width: 0;
   border: none;
   outline: none;
-  padding: 1.25rem;
+  padding: 0.6rem 1rem;
   border-radius: 50px;
   background: #7d6281;
+  color: white;
 }
 
 .uploadBtn,
 .sendBtn {
+  flex-shrink: 0;
   background: none;
   border: none;
   cursor: pointer;
   color: #d5bfd8;
   padding: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
 .fallbackText {
   display: flex;
   flex-direction: column;
@@ -179,5 +186,19 @@
   .fallbackText {
     justify-content: flex-start;
     margin-top: 4rem;
+  }
+  .inputBar {
+    padding: 0.5rem 0.75rem;
+    gap: 0.3rem;
+  }
+
+  .inputBar input {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .uploadBtn,
+  .sendBtn {
+    padding: 0.25rem;
   }
 }

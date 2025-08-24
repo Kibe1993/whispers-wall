@@ -7,10 +7,3 @@ export const pusher = new Pusher({
   cluster: process.env.PUSHER_CLUSTER!,
   useTLS: true,
 });
-
-console.log("PUSHER CONFIG:", {
-  appId: process.env.PUSHER_APP_ID,
-  key: process.env.PUSHER_KEY,
-  secret: process.env.PUSHER_SECRET ? "*****" : undefined,
-  cluster: process.env.PUSHER_CLUSTER,
-});
