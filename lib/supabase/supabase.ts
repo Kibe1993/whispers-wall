@@ -44,6 +44,8 @@ export async function uploadFileToSupabase(
  * @param filePath The exact path in Supabase bucket, e.g. 'topics/Life/file.pdf'
  */
 export async function deleteFileFromSupabase(filePath: string) {
+  console.log("🗑 Attempting to delete:", filePath);
+
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)
     .remove([filePath]);
@@ -53,5 +55,6 @@ export async function deleteFileFromSupabase(filePath: string) {
     throw error;
   }
 
+  console.log("✅ Deleted from Supabase:", data);
   return data;
 }

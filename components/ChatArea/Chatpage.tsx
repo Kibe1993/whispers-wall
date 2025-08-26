@@ -28,6 +28,9 @@ export default function ChatPage() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // 🔑 force-remount key for the <input type="file">
+  const [fileInputKey, setFileInputKey] = useState(0);
+
   // Send new message (with optional files)
   const handleSend = async () => {
     if ((!input.trim() && files.length === 0) || !activeTopic || !user) return;
@@ -47,6 +50,8 @@ export default function ChatPage() {
       });
       setInput("");
       setFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setFileInputKey((k) => k + 1); // 🔥 ensure same-file re-select works
     } catch (err) {
       console.error("❌ Failed to send message:", err);
     }
@@ -72,13 +77,27 @@ export default function ChatPage() {
 
   // Trigger file input when clicking upload button
   const handleUploadClick = () => {
+    // 🔄 clear value so picking the same file triggers onChange
+    if (fileInputRef.current) fileInputRef.current.value = "";
     fileInputRef.current?.click();
   };
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    setFiles(Array.from(e.target.files));
+    const list = e.target.files;
+    if (!list || list.length === 0) {
+      // user canceled picker → clear and remount input
+      setFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setFileInputKey((k) => k + 1);
+      return;
+    }
+
+    // set selected files
+    setFiles(Array.from(list));
+
+    // allow picking the same file again next time
+    e.target.value = "";
   };
 
   return (
@@ -128,7 +147,6 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input bar */}
       {/* File preview with cancel (above input bar) */}
       {files.length > 0 && (
         <div className={styles.filePreview}>
@@ -156,7 +174,15 @@ export default function ChatPage() {
                 type="button"
                 className={styles.removeBtn}
                 onClick={() =>
-                  setFiles((prev) => prev.filter((_, i) => i !== idx))
+                  setFiles((prev) => {
+                    const next = prev.filter((_, i) => i !== idx);
+                    // if last item removed, reset input so same-file reselect works
+                    if (next.length === 0) {
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                      setFileInputKey((k) => k + 1);
+                    }
+                    return next;
+                  })
                 }
               >
                 ✖
@@ -176,6 +202,7 @@ export default function ChatPage() {
       >
         {/* Hidden file input */}
         <input
+          key={fileInputKey} // 🔥 force-remount when we reset
           type="file"
           ref={fileInputRef}
           style={{ display: "none" }}

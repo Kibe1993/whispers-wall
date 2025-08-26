@@ -37,12 +37,20 @@ export default function WhisperActions(props: WhisperActionsProps) {
   const [editInput, setEditInput] = useState(message || "");
   const [relativeTime, setRelativeTime] = useState("");
 
+  // ✅ Local state for files
+  const [filesState, setFilesState] = useState(files || []);
+
   const isAuthor = clerkId === user?.id;
 
   // ✅ Sync editInput with latest message
   useEffect(() => {
     setEditInput(message || "");
   }, [message]);
+
+  // ✅ Sync local files state with props
+  useEffect(() => {
+    setFilesState(files || []);
+  }, [files]);
 
   // 🕒 Relative time
   useEffect(() => {
@@ -111,7 +119,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
     try {
       const res = await axios.patch(`/api/messages/${_id}`, {
         message: editInput,
-        files,
+        files: filesState,
         parentId: rootId,
       });
       onUpdate(res.data);
@@ -124,16 +132,17 @@ export default function WhisperActions(props: WhisperActionsProps) {
   // 🗑️ Delete
   const handleDelete = async () => {
     if (!user) return;
-    const confirmDelete = confirm(
-      "Are you sure you want to delete this whisper and all its replies?"
-    );
+    const confirmDelete = confirm("Are you sure you want to delete this?");
     if (!confirmDelete) return;
 
     try {
       await axios.delete(`/api/messages/${_id}`, {
         data: { parentId: rootId },
       });
-      onDelete(_id, rootId);
+
+      // 🔥 quick refresh from server
+      const res = await axios.get(`/api/messages?topic=${topic}`);
+      onUpdate(res.data);
     } catch (err) {
       console.error("❌ Failed to delete:", err);
     }
@@ -161,9 +170,9 @@ export default function WhisperActions(props: WhisperActionsProps) {
           />
 
           {/* ✅ Show media previews while editing */}
-          {files && files.length > 0 && (
+          {filesState && filesState.length > 0 && (
             <div className={styles.filePreviewContainer}>
-              {files.map((file, idx) => {
+              {filesState.map((file, idx) => {
                 const url = file.url;
                 if (url.match(/\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i)) {
                   return (
@@ -210,9 +219,9 @@ export default function WhisperActions(props: WhisperActionsProps) {
           <p className={styles.messageText}>{message}</p>
 
           {/* ✅ Normal media rendering */}
-          {files && files.length > 0 && (
+          {filesState && filesState.length > 0 && (
             <div className={styles.filePreviewContainer}>
-              {files.map((file, idx) => {
+              {filesState.map((file, idx) => {
                 const url = file.url;
 
                 if (url.match(/\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i)) {

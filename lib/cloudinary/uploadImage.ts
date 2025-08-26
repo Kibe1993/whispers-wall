@@ -28,3 +28,17 @@ export function uploadImageToCloudinary(
     Readable.from(buffer).pipe(stream);
   });
 }
+export async function deleteFileFromCloudinary(public_id: string) {
+  try {
+    const result = await cloudinary.uploader.destroy(public_id);
+
+    if (result.result !== "ok" && result.result !== "not found") {
+      throw new Error(`Failed to delete from Cloudinary: ${result.result}`);
+    }
+
+    return { success: true, result };
+  } catch (err) {
+    console.error("❌ Cloudinary delete error:", err);
+    throw err;
+  }
+}

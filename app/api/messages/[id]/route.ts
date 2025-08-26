@@ -1,3 +1,4 @@
+import { deleteFileFromCloudinary } from "@/lib/cloudinary/uploadImage";
 import { connectDB } from "@/lib/DB/connectDB";
 import { Reply } from "@/lib/interface/typescriptinterface";
 import MessageModel from "@/lib/Models/message";
@@ -18,6 +19,7 @@ export async function PATCH(req: NextRequest, context: unknown) {
   try {
     const { message, parentReplyId } = await req.json();
 
+    // Validate message content
     if (!message) {
       return NextResponse.json(
         { error: "Message text is required" },
@@ -30,8 +32,9 @@ export async function PATCH(req: NextRequest, context: unknown) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
 
+    // ✅ Case 1: Editing a nested reply
     if (parentReplyId) {
-      // recursive search for the reply
+      // Recursive function to locate and update reply
       const updateReply = (replies: Reply[]): boolean => {
         for (const r of replies) {
           if (r._id.toString() === parentReplyId) {
@@ -54,24 +57,25 @@ export async function PATCH(req: NextRequest, context: unknown) {
 
       const savedMsg = await msg.save();
 
-      await pusher.trigger(`topic-${msg.topic}`, "update-message", savedMsg);
-
-      return NextResponse.json(savedMsg, { status: 200 });
-    } else {
-      // editing the root whisper
-      if (msg.clerkId !== userId) {
-        return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-      }
-
-      msg.message = message;
-      const savedMsg = await msg.save();
-
+      // Trigger Pusher event so clients update in real time
       await pusher.trigger(`topic-${msg.topic}`, "update-message", savedMsg);
 
       return NextResponse.json(savedMsg, { status: 200 });
     }
+
+    // ✅ Case 2: Editing the root message
+    if (msg.clerkId !== userId) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    }
+
+    msg.message = message;
+    const savedMsg = await msg.save();
+
+    // Notify clients about the update
+    await pusher.trigger(`topic-${msg.topic}`, "update-message", savedMsg);
+
+    return NextResponse.json(savedMsg, { status: 200 });
   } catch (error) {
-    console.error("❌ Error editing message:", error);
     return NextResponse.json(
       {
         error:
@@ -81,9 +85,6 @@ export async function PATCH(req: NextRequest, context: unknown) {
     );
   }
 }
-
-// 🔍 Find a reply by its ID in a nested thread
-// 🔍 Find a reply by its ID in a nested thread
 
 // Utility: find reply recursively
 function findReplyRecursive(replies: Reply[], id: string): Reply | null {
@@ -137,7 +138,7 @@ export async function DELETE(req: NextRequest, context: unknown) {
   try {
     const { parentId } = await req.json();
 
-    // 🟢 Case 1: root message
+    // ✅ Case 1: Deleting a root message
     if (!parentId || parentId === id) {
       const msg = await MessageModel.findById(id);
       if (!msg) {
@@ -151,18 +152,25 @@ export async function DELETE(req: NextRequest, context: unknown) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
 
-      // Delete the file from Supabase if it exists
-      if (msg.filePath) {
-        try {
-          await deleteFileFromSupabase(msg.filePath);
-        } catch (err) {
-          console.error("❌ Supabase delete failed:", err);
+      // Delete attached files (Supabase + Cloudinary)
+      if (msg.files && msg.files.length > 0) {
+        for (const file of msg.files) {
+          try {
+            if (file.public_id) {
+              await deleteFileFromSupabase(file.public_id);
+              await deleteFileFromCloudinary(file.public_id);
+            }
+          } catch (err) {
+            // File deletion errors are logged but do not block DB deletion
+            console.error(`❌ Failed to delete file ${file.public_id}:`, err);
+          }
         }
       }
 
-      // Delete the record
+      // Delete DB record
       await msg.deleteOne();
 
+      // Notify clients that message was deleted
       await pusher.trigger(`topic-${msg.topic}`, "delete-message", {
         id,
         parentId: null,
@@ -171,16 +179,13 @@ export async function DELETE(req: NextRequest, context: unknown) {
       return NextResponse.json({ success: true });
     }
 
-    // 🟢 Case 2: nested reply
-
+    // ✅ Case 2: Deleting a nested reply
     const parent = await MessageModel.findById(parentId);
     if (!parent) {
       return NextResponse.json({ error: "Parent not found" }, { status: 404 });
     }
 
-    // Find the reply in the tree
     const targetReply = findReplyRecursive(parent.replies as Reply[], id);
-
     if (!targetReply) {
       return NextResponse.json({ error: "Reply not found" }, { status: 404 });
     }
@@ -189,11 +194,8 @@ export async function DELETE(req: NextRequest, context: unknown) {
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 
-    // ✅ Replies don’t have `filePath` or `publicId`, so nothing to delete from Supabase/Cloudinary
-
-    // Remove reply recursively from parent
+    // Remove the reply from nested structure
     const deleted = removeReplyRecursive(parent.replies as Reply[], id, userId);
-
     if (!deleted) {
       return NextResponse.json(
         { error: "Reply not found or unauthorized" },
@@ -203,6 +205,7 @@ export async function DELETE(req: NextRequest, context: unknown) {
 
     const savedParent = await parent.save();
 
+    // Notify clients of the updated thread
     await pusher.trigger(
       `topic-${parent.topic}`,
       "update-message",
@@ -211,7 +214,6 @@ export async function DELETE(req: NextRequest, context: unknown) {
 
     return NextResponse.json(savedParent, { status: 200 });
   } catch (err) {
-    console.error("❌ Error deleting:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to delete" },
       { status: 500 }
