@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.31.3",
+    "@supabase/supabase-js": "^2.56.0",
     "axios": "^1.11.0",
+    "cloudinary": "^2.7.0",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.540.0",
     "mongoose": "^8.17.2",
@@ -19,7 +21,8 @@
     "pusher": "^5.2.0",
     "pusher-js": "^8.4.0",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

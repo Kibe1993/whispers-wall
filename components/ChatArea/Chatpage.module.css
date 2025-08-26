@@ -131,6 +131,58 @@
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
+.filePreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.fileItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #f9f9f9;
+  position: relative;
+}
+
+.thumbnail {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.fileIcon {
+  font-size: 24px;
+}
+
+.fileName {
+  font-size: 0.9rem;
+  color: #333;
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  color: #e63946;
+  font-size: 16px;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.removeBtn:hover {
+  color: #c1121f;
+}
+
 /* RESPONSIVENESS */
 @media (max-width: 768px) {
   .chatContainer {

@@ -1,4 +1,9 @@
-// types/message.ts
+export interface FileMeta {
+  _id: string;
+  url: string;
+  public_id?: string;
+}
+
 export interface Reply {
   _id: string;
   clerkId: string;
@@ -7,6 +12,7 @@ export interface Reply {
   likes: string[];
   dislikes: string[];
   replies: Reply[];
+  files?: FileMeta[]; // ✅ include files
 }
 
 export interface Message {
@@ -18,6 +24,7 @@ export interface Message {
   likes: string[];
   dislikes: string[];
   replies: Reply[];
+  files?: FileMeta[]; // ✅ include files
 }
 
 export interface WhisperProps {
@@ -27,10 +34,11 @@ export interface WhisperProps {
   likes: string[];
   dislikes: string[];
   replies: Reply[];
+  files?: FileMeta[]; // ✅ instead of string[]
   topic?: string;
   createdAt?: string;
   rootId?: string;
   isUser?: boolean;
   onUpdate: (updatedMsg: Message) => void;
-  onDelete: (id: string, parentId?: string | null) => void; // ✅ now required
+  onDelete: (id: string, parentId?: string | null) => void;
 }

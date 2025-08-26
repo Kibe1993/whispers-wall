@@ -4,11 +4,7 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import axios from "axios";
 import styles from "./WhisperActions.module.css";
-import {
-  WhisperProps,
-  Reply,
-  Message,
-} from "@/lib/interface/typescriptinterface";
+import { WhisperProps, Reply } from "@/lib/interface/typescriptinterface";
 import { formatDistanceToNow } from "date-fns";
 
 interface WhisperActionsProps extends WhisperProps {
@@ -25,6 +21,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
     replies,
     createdAt,
     topic,
+    files = [],
     onUpdate,
     onDelete,
     rootId: rootIdFromParent,
@@ -37,19 +34,26 @@ export default function WhisperActions(props: WhisperActionsProps) {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyInput, setReplyInput] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-  const [editInput, setEditInput] = useState(message);
+  const [editInput, setEditInput] = useState(message || "");
   const [relativeTime, setRelativeTime] = useState("");
 
   const isAuthor = clerkId === user?.id;
 
-  // 🕒 update relative time
+  // ✅ Sync editInput with latest message
+  useEffect(() => {
+    setEditInput(message || "");
+  }, [message]);
+
+  // 🕒 Relative time
   useEffect(() => {
     if (!createdAt) return;
+
     const updateTime = () => {
       setRelativeTime(
         formatDistanceToNow(new Date(createdAt), { addSuffix: true })
       );
     };
+
     updateTime();
     const interval = setInterval(updateTime, 60000);
     return () => clearInterval(interval);
@@ -107,6 +111,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
     try {
       const res = await axios.patch(`/api/messages/${_id}`, {
         message: editInput,
+        files,
         parentId: rootId,
       });
       onUpdate(res.data);
@@ -145,7 +150,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
         <span className={styles.timestamp}>{relativeTime}</span>
       </div>
 
-      {/* Message */}
+      {/* Message or edit form */}
       {isEditing ? (
         <div className={styles.editContainer}>
           <textarea
@@ -154,6 +159,37 @@ export default function WhisperActions(props: WhisperActionsProps) {
             className={styles.editTextarea}
             rows={3}
           />
+
+          {/* ✅ Show media previews while editing */}
+          {files && files.length > 0 && (
+            <div className={styles.filePreviewContainer}>
+              {files.map((file, idx) => {
+                const url = file.url;
+                if (url.match(/\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i)) {
+                  return (
+                    <img
+                      key={idx}
+                      src={url}
+                      alt={`attachment-${idx}`}
+                      className={styles.fileImage}
+                    />
+                  );
+                }
+                if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) {
+                  return (
+                    <video
+                      key={idx}
+                      src={url}
+                      controls
+                      className={styles.fileVideo}
+                    />
+                  );
+                }
+                return null;
+              })}
+            </div>
+          )}
+
           <div className={styles.editActions}>
             <button onClick={handleEdit} className={styles.saveBtn}>
               Save
@@ -161,7 +197,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
             <button
               onClick={() => {
                 setIsEditing(false);
-                setEditInput(message);
+                setEditInput(message || ""); // reset
               }}
               className={styles.cancelBtn}
             >
@@ -170,10 +206,55 @@ export default function WhisperActions(props: WhisperActionsProps) {
           </div>
         </div>
       ) : (
-        <p className={styles.messageText}>{message}</p>
+        <>
+          <p className={styles.messageText}>{message}</p>
+
+          {/* ✅ Normal media rendering */}
+          {files && files.length > 0 && (
+            <div className={styles.filePreviewContainer}>
+              {files.map((file, idx) => {
+                const url = file.url;
+
+                if (url.match(/\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i)) {
+                  return (
+                    <img
+                      key={idx}
+                      src={url}
+                      alt={`attachment-${idx}`}
+                      className={styles.fileImage}
+                    />
+                  );
+                }
+
+                if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) {
+                  return (
+                    <video
+                      key={idx}
+                      src={url}
+                      controls
+                      className={styles.fileVideo}
+                    />
+                  );
+                }
+
+                return (
+                  <a
+                    key={idx}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.fileLink}
+                  >
+                    📎 Attachment {idx + 1}
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
-      {/* Actions */}
+      {/* Action buttons */}
       <div className={styles.actions}>
         <button onClick={() => setShowReplies((p) => !p)}>
           💬 {replies.length}
@@ -183,7 +264,14 @@ export default function WhisperActions(props: WhisperActionsProps) {
         <button onClick={handleDislike}>👎 {dislikes.length}</button>
         {isAuthor && !isEditing && (
           <>
-            <button onClick={() => setIsEditing(true)}>✏️ Edit</button>
+            <button
+              onClick={() => {
+                setIsEditing(true);
+                setEditInput(message || ""); // preload before editing
+              }}
+            >
+              ✏️ Edit
+            </button>
             <button onClick={handleDelete}>🗑️ Delete</button>
           </>
         )}
@@ -208,7 +296,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
         </form>
       )}
 
-      {/* Replies */}
+      {/* Nested replies */}
       {showReplies && replies.length > 0 && (
         <div className={styles.replies}>
           {replies.map((r: Reply) => (
@@ -222,8 +310,9 @@ export default function WhisperActions(props: WhisperActionsProps) {
               replies={r.replies || []}
               createdAt={r.createdAt}
               topic={topic}
+              files={r.files || []}
               onUpdate={onUpdate}
-              onDelete={onDelete} // ✅ pass down
+              onDelete={onDelete}
               rootId={rootId}
             />
           ))}

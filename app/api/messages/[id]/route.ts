@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/DB/connectDB";
 import { Reply } from "@/lib/interface/typescriptinterface";
 import MessageModel from "@/lib/Models/message";
 import { pusher } from "@/lib/Pusher/pusher";
+import { deleteFileFromSupabase } from "@/lib/supabase/supabase";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -53,9 +54,6 @@ export async function PATCH(req: NextRequest, context: unknown) {
 
       const savedMsg = await msg.save();
 
-      console.log("✅ PATCH reply saved:", savedMsg._id);
-      console.log("📡 Triggering update-message on:", `topic-${msg.topic}`);
-
       await pusher.trigger(`topic-${msg.topic}`, "update-message", savedMsg);
 
       return NextResponse.json(savedMsg, { status: 200 });
@@ -67,9 +65,6 @@ export async function PATCH(req: NextRequest, context: unknown) {
 
       msg.message = message;
       const savedMsg = await msg.save();
-
-      console.log("✅ PATCH root saved:", savedMsg._id);
-      console.log("📡 Triggering update-message on:", `topic-${msg.topic}`);
 
       await pusher.trigger(`topic-${msg.topic}`, "update-message", savedMsg);
 
@@ -87,20 +82,42 @@ export async function PATCH(req: NextRequest, context: unknown) {
   }
 }
 
+// 🔍 Find a reply by its ID in a nested thread
+// 🔍 Find a reply by its ID in a nested thread
+
+// Utility: find reply recursively
+function findReplyRecursive(replies: Reply[], id: string): Reply | null {
+  for (const reply of replies) {
+    if (reply._id.toString() === id) return reply;
+    if (reply.replies?.length) {
+      const found = findReplyRecursive(reply.replies as Reply[], id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// Utility: remove reply recursively
 function removeReplyRecursive(
   replies: Reply[],
   id: string,
   userId: string
 ): boolean {
-  for (let i = 0; i < replies.length; i++) {
-    const r = replies[i];
-    if (r._id.toString() === id) {
-      if (r.clerkId !== userId)
-        throw new Error("Not authorized to delete this reply");
-      replies.splice(i, 1);
-      return true;
-    } else if (r.replies?.length) {
-      if (removeReplyRecursive(r.replies, id, userId)) return true;
+  const index = replies.findIndex(
+    (r) => r._id.toString() === id && r.clerkId === userId
+  );
+  if (index !== -1) {
+    replies.splice(index, 1);
+    return true;
+  }
+  for (const reply of replies) {
+    if (reply.replies?.length) {
+      const removed = removeReplyRecursive(
+        reply.replies as Reply[],
+        id,
+        userId
+      );
+      if (removed) return true;
     }
   }
   return false;
@@ -112,6 +129,7 @@ export async function DELETE(req: NextRequest, context: unknown) {
 
   await connectDB();
   const { userId } = await auth();
+
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -119,7 +137,7 @@ export async function DELETE(req: NextRequest, context: unknown) {
   try {
     const { parentId } = await req.json();
 
-    // 🟢 Case 1: root whisper
+    // 🟢 Case 1: root message
     if (!parentId || parentId === id) {
       const msg = await MessageModel.findById(id);
       if (!msg) {
@@ -128,10 +146,21 @@ export async function DELETE(req: NextRequest, context: unknown) {
           { status: 404 }
         );
       }
+
       if (msg.clerkId !== userId) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
 
+      // Delete the file from Supabase if it exists
+      if (msg.filePath) {
+        try {
+          await deleteFileFromSupabase(msg.filePath);
+        } catch (err) {
+          console.error("❌ Supabase delete failed:", err);
+        }
+      }
+
+      // Delete the record
       await msg.deleteOne();
 
       await pusher.trigger(`topic-${msg.topic}`, "delete-message", {
@@ -143,12 +172,28 @@ export async function DELETE(req: NextRequest, context: unknown) {
     }
 
     // 🟢 Case 2: nested reply
+
     const parent = await MessageModel.findById(parentId);
     if (!parent) {
       return NextResponse.json({ error: "Parent not found" }, { status: 404 });
     }
 
+    // Find the reply in the tree
+    const targetReply = findReplyRecursive(parent.replies as Reply[], id);
+
+    if (!targetReply) {
+      return NextResponse.json({ error: "Reply not found" }, { status: 404 });
+    }
+
+    if (targetReply.clerkId !== userId) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    }
+
+    // ✅ Replies don’t have `filePath` or `publicId`, so nothing to delete from Supabase/Cloudinary
+
+    // Remove reply recursively from parent
     const deleted = removeReplyRecursive(parent.replies as Reply[], id, userId);
+
     if (!deleted) {
       return NextResponse.json(
         { error: "Reply not found or unauthorized" },
