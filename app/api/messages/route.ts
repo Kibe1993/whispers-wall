@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     const topic = formData.get("topic") as string;
     const files = formData.getAll("files") as File[];
 
-    let uploadedFiles: {
+    const uploadedFiles: {
       url: string;
       name: string;
       type: string;
