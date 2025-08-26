@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useTopic } from "@/library/context/TopicContext";
 import { useUser } from "@clerk/nextjs";
 import axios from "axios";
@@ -30,6 +30,13 @@ export default function ChatPage() {
 
   // 🔑 force-remount key for the <input type="file">
   const [fileInputKey, setFileInputKey] = useState(0);
+
+  // 👇 autoscroll effect
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   // Send new message (with optional files)
   const handleSend = async () => {
