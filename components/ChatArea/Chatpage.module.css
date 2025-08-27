@@ -19,13 +19,18 @@
 }
 
 .messages {
-  flex: 1; /* takes remaining space */
-  min-height: 0; /* important for scroll inside flex */
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+
+  /* 👇 reserve space for input bar */
+  padding-bottom: 120px;
+  margin-bottom: 50px;
+
   scroll-behavior: smooth;
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -43,6 +48,7 @@
   display: inline-block;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
+
 .messages.empty {
   flex: 1;
   display: flex;
@@ -65,17 +71,20 @@
 }
 
 .inputBar {
-  flex-shrink: 0; /* stays pinned bottom */
+  position: fixed; /* 👈 pinned to bottom like WhatsApp */
+  bottom: 0;
+  left: 0;
+  width: 100%;
+
   display: flex;
   align-items: center;
   padding: 0.75rem 1rem;
-  border-radius: 50px;
+  border-radius: 50px 50px 0 0;
   background: #481a50;
   border-top: 1px solid #7d6281;
   gap: 0.5rem;
-  margin: 0;
-  width: 100%;
   box-sizing: border-box;
+  z-index: 10;
 }
 
 .inputBar input {
@@ -196,6 +205,7 @@
   .messages {
     padding: 0.5rem;
     gap: 0.4rem;
+    padding-bottom: 80px; /* match smaller bar height */
   }
 
   .message {

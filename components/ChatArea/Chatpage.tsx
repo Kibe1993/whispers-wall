@@ -28,23 +28,19 @@ export default function ChatPage() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 🔑 force-remount key for the <input type="file">
   const [fileInputKey, setFileInputKey] = useState(0);
-
-  // track autoScroll state
   const [autoScroll, setAutoScroll] = useState(true);
 
-  // 👇 handle scroll position tracking
+  // 👇 track scroll position
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
 
     const handleScroll = () => {
-      const threshold = 100; // px from bottom
+      const threshold = 100;
       const isAtBottom =
         container.scrollHeight - container.scrollTop - container.clientHeight <
         threshold;
-
       setAutoScroll(isAtBottom);
     };
 
@@ -52,17 +48,14 @@ export default function ChatPage() {
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // autoscroll effect
+  // 👇 auto-scroll effect
   useEffect(() => {
     if (autoScroll && messagesEndRef.current) {
-      const t = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 50); // wait for DOM to commit replies
-      return () => clearTimeout(t);
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [JSON.stringify(messages), autoScroll]);
+  }, [messages, autoScroll]);
 
-  // Send new message (with optional files)
+  // 👇 send new message
   const handleSend = async () => {
     if ((!input.trim() && files.length === 0) || !activeTopic || !user) return;
 
@@ -83,27 +76,19 @@ export default function ChatPage() {
       setFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       setFileInputKey((k) => k + 1);
-
-      // always scroll down when I send a message
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-      }
     } catch (err) {
       console.error("❌ Failed to send message:", err);
     }
   };
 
-  // Handle updating an existing message
+  // 👇 update / delete helpers
   const handleUpdate = (updatedMsg: Message) => {
     setMessages((prev) => mergeUpdatedMessage(prev, updatedMsg));
   };
 
-  // Handle deleting a message or nested reply
   const handleDelete = (id: string, parentId?: string | null) => {
     setMessages((prev) => {
-      if (!parentId) {
-        return prev.filter((m) => m._id !== id);
-      }
+      if (!parentId) return prev.filter((m) => m._id !== id);
       return prev.map((m) => ({
         ...m,
         replies: removeReplyRecursively(m.replies || [], id),
@@ -111,13 +96,11 @@ export default function ChatPage() {
     });
   };
 
-  // Trigger file input when clicking upload button
   const handleUploadClick = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
     fileInputRef.current?.click();
   };
 
-  // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files;
     if (!list || list.length === 0) {
@@ -177,7 +160,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* File preview with cancel */}
+      {/* File preview */}
       {files.length > 0 && (
         <div className={styles.filePreview}>
           {files.map((file, idx) => (
@@ -199,7 +182,6 @@ export default function ChatPage() {
               )}
 
               <span className={styles.fileName}>{file.name}</span>
-
               <button
                 type="button"
                 className={styles.removeBtn}
@@ -229,7 +211,6 @@ export default function ChatPage() {
           handleSend();
         }}
       >
-        {/* Hidden file input */}
         <input
           key={fileInputKey}
           type="file"
