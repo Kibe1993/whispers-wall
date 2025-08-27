@@ -32,9 +32,9 @@
 }
 
 .message {
-  max-width: 50%;
+  max-width: 75%; /* was 50% - more natural on small screens */
   padding: 0.8rem 1rem;
-  margin: 0 1rem;
+  margin: 0; /* removed horizontal margin causing left shift */
   border-radius: 1rem;
   word-wrap: break-word;
   display: inline-block;
@@ -70,8 +70,8 @@
   border-top: 1px solid #7d6281;
   gap: 0.5rem;
   flex-shrink: 0;
-  margin: 0.5rem;
-  width: calc(100% - 1rem);
+  margin: 0; /* removed margin */
+  width: 100%; /* was calc(100% - 1rem) */
   box-sizing: border-box;
 }
 
@@ -131,6 +131,7 @@
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
+
 .filePreview {
   display: flex;
   flex-wrap: wrap;
@@ -205,12 +206,12 @@
     max-width: 90%;
     padding: 0.6rem 0.8rem;
     font-size: 0.9rem;
-    margin: 0.25rem 0;
+    margin: 0; /* keep flush */
   }
 
   .inputBar {
-    margin: 0.5rem auto;
-    width: calc(100% - 1rem);
+    margin: 0; /* keep aligned */
+    width: 100%;
     padding: 0.5rem 0.75rem;
     gap: 0.4rem;
   }
