@@ -211,6 +211,97 @@
   margin-top: 4px;
   word-break: break-word;
 }
+.replyInputWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+/* ✅ Reply file previews ABOVE the input row */
+.replyPreviewContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.replyPreviewItem {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  max-width: 120px;
+  max-height: 120px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.replyPreviewImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.replyPreviewRemove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 20px;
+}
+.replyPreviewRemove:hover {
+  background: rgba(255, 0, 0, 0.7);
+}
+
+/* ✅ Input row (separate from previews) */
+.replyInput {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.replyInput input {
+  flex: 1;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.replyInput input::placeholder {
+  color: #aaa;
+}
+
+.replyInput input:focus {
+  outline: none;
+  border-color: #b48ef7;
+}
+
+.replyInput button {
+  padding: 0.35rem 0.9rem;
+  border: none;
+  border-radius: 9999px;
+  background-color: #b48ef7;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.85rem; /* 🔥 fixed typo */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.replyInput button:hover {
+  background-color: #9a6fd6;
+}
 
 /* 📱 Mobile tweaks */
 @media (max-width: 600px) {
@@ -250,5 +341,30 @@
 
   .filePreviewContainer {
     flex-direction: column;
+  }
+}
+@media (max-width: 600px) {
+  .replyInput input {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  .replyInput button {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .replyInput svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .replyPreviewContainer {
+    gap: 0.4rem;
+  }
+
+  .replyPreviewItem {
+    max-width: 90px;
+    max-height: 90px;
   }
 }

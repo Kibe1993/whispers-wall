@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import axios from "axios";
 import styles from "./WhisperActions.module.css";
 import { WhisperProps, Reply } from "@/lib/interface/typescriptinterface";
 import { formatDistanceToNow } from "date-fns";
+import { Upload, X } from "lucide-react";
 
 interface WhisperActionsProps extends WhisperProps {
   rootId?: string;
@@ -33,41 +34,39 @@ export default function WhisperActions(props: WhisperActionsProps) {
   const [showReplies, setShowReplies] = useState(false);
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyInput, setReplyInput] = useState("");
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editInput, setEditInput] = useState(message || "");
   const [relativeTime, setRelativeTime] = useState("");
-
-  // ✅ Local state for files
   const [filesState, setFilesState] = useState(files || []);
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isAuthor = clerkId === user?.id;
 
-  // ✅ Sync editInput with latest message
+  /** Keep message in sync */
   useEffect(() => {
     setEditInput(message || "");
   }, [message]);
 
-  // ✅ Sync local files state with props
+  /** Keep files in sync */
   useEffect(() => {
     setFilesState(files || []);
   }, [files]);
 
-  // 🕒 Relative time
+  /** Handle relative time updates */
   useEffect(() => {
     if (!createdAt) return;
-
     const updateTime = () => {
       setRelativeTime(
         formatDistanceToNow(new Date(createdAt), { addSuffix: true })
       );
     };
-
     updateTime();
     const interval = setInterval(updateTime, 60000);
     return () => clearInterval(interval);
   }, [createdAt]);
 
-  // ❤️ Like
+  /** Like handler */
   const handleLike = async () => {
     if (!user) return;
     try {
@@ -81,7 +80,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
     }
   };
 
-  // 👎 Dislike
+  /** Dislike handler */
   const handleDislike = async () => {
     if (!user) return;
     try {
@@ -95,16 +94,23 @@ export default function WhisperActions(props: WhisperActionsProps) {
     }
   };
 
-  // 💬 Reply
+  /** Reply handler */
   const handleReply = async () => {
     if (!user || !replyInput.trim()) return;
     try {
-      const res = await axios.post(`/api/messages/${rootId}/reply`, {
-        message: replyInput,
-        clerkId: user.id,
-        parentReplyId: _id !== rootId ? _id : null,
+      const formData = new FormData();
+      formData.append("message", replyInput);
+      formData.append("clerkId", user.id);
+      if (_id !== rootId) formData.append("parentReplyId", _id);
+
+      replyFiles.forEach((file) => formData.append("files", file));
+
+      const res = await axios.post(`/api/messages/${rootId}/reply`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
+
       setReplyInput("");
+      setReplyFiles([]);
       setShowReplyInput(false);
       setShowReplies(true);
       onUpdate(res.data);
@@ -113,7 +119,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
     }
   };
 
-  // ✏️ Edit
+  /** Edit handler */
   const handleEdit = async () => {
     if (!user || !editInput.trim()) return;
     try {
@@ -129,23 +135,33 @@ export default function WhisperActions(props: WhisperActionsProps) {
     }
   };
 
-  // 🗑️ Delete
+  /** Delete handler */
   const handleDelete = async () => {
     if (!user) return;
-    const confirmDelete = confirm("Are you sure you want to delete this?");
-    if (!confirmDelete) return;
+    if (!confirm("Are you sure you want to delete this?")) return;
 
     try {
       await axios.delete(`/api/messages/${_id}`, {
         data: { parentId: rootId },
       });
 
-      // 🔥 quick refresh from server
       const res = await axios.get(`/api/messages?topic=${topic}`);
       onUpdate(res.data);
     } catch (err) {
       console.error("❌ Failed to delete:", err);
     }
+  };
+
+  /** Handle reply file input */
+  const handleReplyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    setReplyFiles(Array.from(e.target.files));
+    e.target.value = ""; // reset for re-uploads
+  };
+
+  /** Remove file from preview */
+  const removeReplyFile = (index: number) => {
+    setReplyFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -159,7 +175,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
         <span className={styles.timestamp}>{relativeTime}</span>
       </div>
 
-      {/* Message or edit form */}
+      {/* Message or edit */}
       {isEditing ? (
         <div className={styles.editContainer}>
           <textarea
@@ -169,33 +185,22 @@ export default function WhisperActions(props: WhisperActionsProps) {
             rows={3}
           />
 
-          {/* ✅ Show media previews while editing */}
-          {filesState && filesState.length > 0 && (
+          {/* File previews (existing) */}
+          {filesState?.length > 0 && (
             <div className={styles.filePreviewContainer}>
-              {filesState.map((file, idx) => {
-                const url = file.url;
-                if (url.match(/\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i)) {
-                  return (
-                    <img
-                      key={idx}
-                      src={url}
-                      alt={`attachment-${idx}`}
-                      className={styles.fileImage}
-                    />
-                  );
-                }
-                if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) {
-                  return (
+              {filesState.map((file, idx) => (
+                <div key={idx}>
+                  {file.url.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? (
+                    <img src={file.url} className={styles.fileImage} />
+                  ) : file.url.match(/\.(mp4|webm|ogg)$/i) ? (
                     <video
-                      key={idx}
-                      src={url}
+                      src={file.url}
                       controls
                       className={styles.fileVideo}
                     />
-                  );
-                }
-                return null;
-              })}
+                  ) : null}
+                </div>
+              ))}
             </div>
           )}
 
@@ -206,7 +211,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
             <button
               onClick={() => {
                 setIsEditing(false);
-                setEditInput(message || ""); // reset
+                setEditInput(message || "");
               }}
               className={styles.cancelBtn}
             >
@@ -218,46 +223,26 @@ export default function WhisperActions(props: WhisperActionsProps) {
         <>
           <p className={styles.messageText}>{message}</p>
 
-          {/* ✅ Normal media rendering */}
-          {filesState && filesState.length > 0 && (
+          {/* Attachments */}
+          {filesState?.length > 0 && (
             <div className={styles.filePreviewContainer}>
-              {filesState.map((file, idx) => {
-                const url = file.url;
-
-                if (url.match(/\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i)) {
-                  return (
-                    <img
-                      key={idx}
-                      src={url}
-                      alt={`attachment-${idx}`}
-                      className={styles.fileImage}
-                    />
-                  );
-                }
-
-                if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) {
-                  return (
+              {filesState.map((file, idx) => (
+                <div key={idx}>
+                  {file.url.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? (
+                    <img src={file.url} className={styles.fileImage} />
+                  ) : file.url.match(/\.(mp4|webm|ogg)$/i) ? (
                     <video
-                      key={idx}
-                      src={url}
+                      src={file.url}
                       controls
                       className={styles.fileVideo}
                     />
-                  );
-                }
-
-                return (
-                  <a
-                    key={idx}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.fileLink}
-                  >
-                    📎 Attachment {idx + 1}
-                  </a>
-                );
-              })}
+                  ) : (
+                    <a href={file.url} target="_blank" rel="noreferrer">
+                      📎 Attachment {idx + 1}
+                    </a>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </>
@@ -276,7 +261,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
             <button
               onClick={() => {
                 setIsEditing(true);
-                setEditInput(message || ""); // preload before editing
+                setEditInput(message || "");
               }}
             >
               ✏️ Edit
@@ -289,19 +274,61 @@ export default function WhisperActions(props: WhisperActionsProps) {
       {/* Reply input */}
       {showReplyInput && (
         <form
-          className={styles.replyInput}
+          className={styles.replyInputWrapper}
           onSubmit={(e) => {
             e.preventDefault();
             handleReply();
           }}
         >
-          <input
-            type="text"
-            value={replyInput}
-            onChange={(e) => setReplyInput(e.target.value)}
-            placeholder="Whisper your reply"
-          />
-          <button type="submit">Reply</button>
+          {/* Previews ABOVE input row */}
+          {replyFiles.length > 0 && (
+            <div className={styles.replyPreviewContainer}>
+              {replyFiles.map((file, idx) => (
+                <div key={idx} className={styles.replyPreviewItem}>
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className={styles.replyPreviewImage}
+                  />
+                  <button
+                    type="button"
+                    className={styles.replyPreviewRemove}
+                    onClick={() => removeReplyFile(idx)}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Input row */}
+          <div className={styles.replyInput}>
+            <input
+              type="text"
+              value={replyInput}
+              onChange={(e) => setReplyInput(e.target.value)}
+              placeholder="Whisper your reply"
+            />
+
+            {/* File input trigger */}
+            <input
+              type="file"
+              multiple
+              onChange={handleReplyFileChange}
+              ref={fileInputRef}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className={styles.uploadBtn}
+            >
+              <Upload size={18} />
+            </button>
+
+            <button type="submit">Reply</button>
+          </div>
         </form>
       )}
 
