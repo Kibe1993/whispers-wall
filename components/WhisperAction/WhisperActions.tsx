@@ -267,7 +267,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
           className="flex items-center gap-1"
         >
           <MessageCircle size={18} />
-          <span className="hidden sm:inline">{replies.length}</span>
+          <span className=" sm:inline">{replies.length}</span>
         </button>
         <button
           onClick={() => setShowReplyInput((p) => !p)}
@@ -278,11 +278,11 @@ export default function WhisperActions(props: WhisperActionsProps) {
         </button>
         <button onClick={handleLike} className="flex items-center gap-1">
           <Heart size={18} />
-          <span className="hidden sm:inline">{likes.length}</span>
+          <span className=" sm:inline">{likes.length}</span>
         </button>
         <button onClick={handleDislike} className="flex items-center gap-1">
           <ThumbsDown size={18} />
-          <span className="hidden sm:inline">{dislikes.length}</span>
+          <span className=" sm:inline">{dislikes.length}</span>
         </button>
         {isAuthor && !isEditing && (
           <>
