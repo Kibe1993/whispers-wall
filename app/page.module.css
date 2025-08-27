@@ -2,9 +2,11 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin: 0;
+  margin: 0; /* remove auto */
   padding: 0;
   height: 100%;
+  width: 100%; /* make sure it fills full width */
+  box-sizing: border-box;
 }
 
 .overlay {
@@ -24,7 +26,7 @@
   padding: 2rem;
   border-radius: 1rem;
   max-width: 500px;
-  margin: 0 auto;
+  margin: 0;
   text-align: center;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
