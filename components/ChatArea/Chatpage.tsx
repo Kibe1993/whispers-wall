@@ -52,12 +52,15 @@ export default function ChatPage() {
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // 👇 autoscroll effect
+  // autoscroll effect
   useEffect(() => {
     if (autoScroll && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      const t = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 50); // wait for DOM to commit replies
+      return () => clearTimeout(t);
     }
-  }, [messages, autoScroll]);
+  }, [JSON.stringify(messages), autoScroll]);
 
   // Send new message (with optional files)
   const handleSend = async () => {

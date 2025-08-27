@@ -6,7 +6,16 @@ import axios from "axios";
 import styles from "./WhisperActions.module.css";
 import { WhisperProps, Reply } from "@/lib/interface/typescriptinterface";
 import { formatDistanceToNow } from "date-fns";
-import { Upload, X } from "lucide-react";
+import {
+  Upload,
+  X,
+  MessageCircle,
+  Heart,
+  ThumbsDown,
+  Edit,
+  Trash2,
+  Reply as ReplyIcon,
+} from "lucide-react";
 
 interface WhisperActionsProps extends WhisperProps {
   rootId?: string;
@@ -43,17 +52,17 @@ export default function WhisperActions(props: WhisperActionsProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isAuthor = clerkId === user?.id;
 
-  /** Keep message in sync */
+  /** Sync message */
   useEffect(() => {
     setEditInput(message || "");
   }, [message]);
 
-  /** Keep files in sync */
+  /** Sync files */
   useEffect(() => {
     setFilesState(files || []);
   }, [files]);
 
-  /** Handle relative time updates */
+  /** Time updater */
   useEffect(() => {
     if (!createdAt) return;
     const updateTime = () => {
@@ -66,7 +75,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
     return () => clearInterval(interval);
   }, [createdAt]);
 
-  /** Like handler */
+  /** Like */
   const handleLike = async () => {
     if (!user) return;
     try {
@@ -80,7 +89,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
     }
   };
 
-  /** Dislike handler */
+  /** Dislike */
   const handleDislike = async () => {
     if (!user) return;
     try {
@@ -94,9 +103,11 @@ export default function WhisperActions(props: WhisperActionsProps) {
     }
   };
 
-  /** Reply handler */
+  /** Reply */
+  /** Reply */
   const handleReply = async () => {
-    if (!user || !replyInput.trim()) return;
+    if (!user) return;
+    if (!replyInput.trim() && replyFiles.length === 0) return; // ✅ require at least one
     try {
       const formData = new FormData();
       formData.append("message", replyInput);
@@ -109,6 +120,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
+      // ✅ Reset state after sending
       setReplyInput("");
       setReplyFiles([]);
       setShowReplyInput(false);
@@ -119,7 +131,9 @@ export default function WhisperActions(props: WhisperActionsProps) {
     }
   };
 
-  /** Edit handler */
+  /** Edit */
+
+  /** Edit */
   const handleEdit = async () => {
     if (!user || !editInput.trim()) return;
     try {
@@ -135,7 +149,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
     }
   };
 
-  /** Delete handler */
+  /** Delete */
   const handleDelete = async () => {
     if (!user) return;
     if (!confirm("Are you sure you want to delete this?")) return;
@@ -152,21 +166,21 @@ export default function WhisperActions(props: WhisperActionsProps) {
     }
   };
 
-  /** Handle reply file input */
+  /** File input */
   const handleReplyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     setReplyFiles(Array.from(e.target.files));
-    e.target.value = ""; // reset for re-uploads
+    e.target.value = "";
   };
 
-  /** Remove file from preview */
+  /** Remove file */
   const removeReplyFile = (index: number) => {
     setReplyFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
     <div className={styles.whisperContainer}>
-      {/* Meta row */}
+      {/* Meta */}
       <div className={styles.meta}>
         <span className={styles.username}>
           @{clerkId?.slice(0, 10) || "anon"}
@@ -185,7 +199,6 @@ export default function WhisperActions(props: WhisperActionsProps) {
             rows={3}
           />
 
-          {/* File previews (existing) */}
           {filesState?.length > 0 && (
             <div className={styles.filePreviewContainer}>
               {filesState.map((file, idx) => (
@@ -223,7 +236,6 @@ export default function WhisperActions(props: WhisperActionsProps) {
         <>
           <p className={styles.messageText}>{message}</p>
 
-          {/* Attachments */}
           {filesState?.length > 0 && (
             <div className={styles.filePreviewContainer}>
               {filesState.map((file, idx) => (
@@ -248,25 +260,43 @@ export default function WhisperActions(props: WhisperActionsProps) {
         </>
       )}
 
-      {/* Action buttons */}
-      <div className={styles.actions}>
-        <button onClick={() => setShowReplies((p) => !p)}>
-          💬 {replies.length}
+      {/* Action buttons (responsive) */}
+      <div className={`${styles.actions} flex flex-wrap gap-2`}>
+        <button
+          onClick={() => setShowReplies((p) => !p)}
+          className="flex items-center gap-1"
+        >
+          <MessageCircle size={18} />
+          <span className="hidden sm:inline">{replies.length}</span>
         </button>
-        <button onClick={() => setShowReplyInput((p) => !p)}>✍️ Reply</button>
-        <button onClick={handleLike}>❤️ {likes.length}</button>
-        <button onClick={handleDislike}>👎 {dislikes.length}</button>
+        <button
+          onClick={() => setShowReplyInput((p) => !p)}
+          className="flex items-center gap-1"
+        >
+          <ReplyIcon size={18} />
+          <span className="hidden sm:inline">Reply</span>
+        </button>
+        <button onClick={handleLike} className="flex items-center gap-1">
+          <Heart size={18} />
+          <span className="hidden sm:inline">{likes.length}</span>
+        </button>
+        <button onClick={handleDislike} className="flex items-center gap-1">
+          <ThumbsDown size={18} />
+          <span className="hidden sm:inline">{dislikes.length}</span>
+        </button>
         {isAuthor && !isEditing && (
           <>
             <button
-              onClick={() => {
-                setIsEditing(true);
-                setEditInput(message || "");
-              }}
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-1"
             >
-              ✏️ Edit
+              <Edit size={18} />
+              <span className="hidden sm:inline">Edit</span>
             </button>
-            <button onClick={handleDelete}>🗑️ Delete</button>
+            <button onClick={handleDelete} className="flex items-center gap-1">
+              <Trash2 size={18} />
+              <span className="hidden sm:inline">Delete</span>
+            </button>
           </>
         )}
       </div>
@@ -280,7 +310,6 @@ export default function WhisperActions(props: WhisperActionsProps) {
             handleReply();
           }}
         >
-          {/* Previews ABOVE input row */}
           {replyFiles.length > 0 && (
             <div className={styles.replyPreviewContainer}>
               {replyFiles.map((file, idx) => (
@@ -302,7 +331,6 @@ export default function WhisperActions(props: WhisperActionsProps) {
             </div>
           )}
 
-          {/* Input row */}
           <div className={styles.replyInput}>
             <input
               type="text"
@@ -311,7 +339,6 @@ export default function WhisperActions(props: WhisperActionsProps) {
               placeholder="Whisper your reply"
             />
 
-            {/* File input trigger */}
             <input
               type="file"
               multiple
@@ -332,7 +359,6 @@ export default function WhisperActions(props: WhisperActionsProps) {
         </form>
       )}
 
-      {/* Nested replies */}
       {showReplies && replies.length > 0 && (
         <div className={styles.replies}>
           {replies.map((r: Reply) => (
