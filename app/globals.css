@@ -1,34 +1,29 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
 
-/* Tailwind base (if you're using Tailwind utilities) */
+/* Tailwind base (if you're using Tailwind for utilities) */
 @import "tailwindcss";
 
 /* ===========================
    GLOBAL RESET / NORMALIZE
    =========================== */
-html,
-body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  max-width: 100%;
-  height: 100%;
-  overflow-x: hidden; /* prevent side scroll on mobile */
-  -webkit-text-size-adjust: 100%; /* prevent iOS font auto-resize */
-  -webkit-tap-highlight-color: transparent; /* remove gray highlight on iOS */
-  box-sizing: border-box;
-  font-family: "Poppins", sans-serif;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Ensure everything inherits box-sizing */
 *,
 *::before,
 *::after {
   margin: 0;
   padding: 0;
-  box-sizing: inherit;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%; /* Prevent iOS font resizing */
+}
+
+body {
+  background: linear-gradient(145deg, #251827, #25032b);
+  color: #fff;
+  font-family: "Poppins", sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Images & media */
@@ -41,14 +36,12 @@ svg {
   max-width: 100%;
 }
 
-/* ===========================
-   FORM ELEMENTS RESET
-   =========================== */
+/* Form elements reset */
 input,
 textarea,
 button,
 select {
-  font: inherit; /* use Poppins */
+  font: inherit; /* Inherit Poppins */
   color: inherit;
   background: none;
   border: none;
@@ -57,9 +50,6 @@ select {
   -webkit-appearance: none;
   appearance: none;
   border-radius: 0;
-  margin: 0;
-  padding: 0;
-  font-size: 16px; /* 🚫 stop iOS zoom on focus */
 }
 
 /* Buttons specifically */
@@ -86,17 +76,4 @@ ol {
   flex: 1;
   display: flex;
   flex-direction: column;
-}
-
-/* ===========================
-   SAFE AREA (for iOS notch / Android cutouts)
-   =========================== */
-body {
-  background: linear-gradient(145deg, #251827, #25032b);
-  color: #fff;
-
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
 }
