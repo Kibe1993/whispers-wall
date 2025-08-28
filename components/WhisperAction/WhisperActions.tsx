@@ -313,15 +313,35 @@ export default function WhisperActions(props: WhisperActionsProps) {
             handleReply();
           }}
         >
-          <textarea
-            value={replyInput}
-            onChange={(e) => setReplyInput(e.target.value)}
-            className={styles.replyTextarea}
-            rows={2}
-            placeholder="Write a reply..."
-          />
+          <div className={styles.replyPreviewContainer}>
+            {replyFiles.map((file, idx) => (
+              <div key={idx} className={styles.replyPreviewItem}>
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt="preview"
+                  className={styles.replyPreviewImage}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeReplyFile(idx)}
+                  className={styles.replyPreviewRemove}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
 
-          <div className={styles.replyFileWrapper}>
+          <div className={styles.replyInput}>
+            <input
+              type="text"
+              value={replyInput}
+              onChange={(e) => setReplyInput(e.target.value)}
+              placeholder="Write a reply..."
+            />
+            <button type="button" onClick={() => fileInputRef.current?.click()}>
+              <Upload size={16} />
+            </button>
             <input
               ref={fileInputRef}
               type="file"
@@ -330,35 +350,8 @@ export default function WhisperActions(props: WhisperActionsProps) {
               onChange={handleReplyFileChange}
               className="hidden"
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className={styles.fileUploadBtn}
-            >
-              <Upload size={16} /> Attach
-            </button>
+            <button type="submit">Reply</button>
           </div>
-
-          {replyFiles.length > 0 && (
-            <div className={styles.filePreviewContainer}>
-              {replyFiles.map((file, idx) => (
-                <div key={idx} className={styles.filePreview}>
-                  <span>{file.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeReplyFile(idx)}
-                    className={styles.removeFileBtn}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <button type="submit" className={styles.replySubmitBtn}>
-            Reply
-          </button>
         </form>
       )}
 
