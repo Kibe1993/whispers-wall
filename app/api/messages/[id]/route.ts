@@ -125,7 +125,7 @@ function removeReplyRecursive(
 }
 
 function collectFilesFromReplies(replies: Reply[]): { public_id?: string }[] {
-  let files: { public_id?: string }[] = [];
+  const files: { public_id?: string }[] = [];
 
   for (const reply of replies) {
     if (reply.files && reply.files.length > 0) {
@@ -168,7 +168,7 @@ export async function DELETE(req: NextRequest, context: unknown) {
       }
 
       // Collect all files (root + replies)
-      let allFiles: { public_id?: string }[] = [];
+      const allFiles: { public_id?: string }[] = [];
       if (msg.files && msg.files.length > 0) {
         allFiles.push(...msg.files);
       }
@@ -215,7 +215,7 @@ export async function DELETE(req: NextRequest, context: unknown) {
     }
 
     // ✅ Delete reply files (Cloudinary + Supabase)
-    let replyFiles: { public_id?: string }[] = [];
+    const replyFiles: { public_id?: string }[] = [];
     if (targetReply.files && targetReply.files.length > 0) {
       replyFiles.push(...targetReply.files);
     }
