@@ -124,6 +124,21 @@ function removeReplyRecursive(
   return false;
 }
 
+function collectFilesFromReplies(replies: Reply[]): { public_id?: string }[] {
+  let files: { public_id?: string }[] = [];
+
+  for (const reply of replies) {
+    if (reply.files && reply.files.length > 0) {
+      files.push(...reply.files);
+    }
+    if (reply.replies && reply.replies.length > 0) {
+      files.push(...collectFilesFromReplies(reply.replies as Reply[]));
+    }
+  }
+
+  return files;
+}
+
 export async function DELETE(req: NextRequest, context: unknown) {
   const { params } = context as { params: { id: string } };
   const { id } = params;
@@ -152,25 +167,30 @@ export async function DELETE(req: NextRequest, context: unknown) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
 
-      // Delete attached files (Supabase + Cloudinary)
+      // Collect all files (root + replies)
+      let allFiles: { public_id?: string }[] = [];
       if (msg.files && msg.files.length > 0) {
-        for (const file of msg.files) {
-          try {
-            if (file.public_id) {
-              await deleteFileFromSupabase(file.public_id);
-              await deleteFileFromCloudinary(file.public_id);
-            }
-          } catch (err) {
-            // File deletion errors are logged but do not block DB deletion
-            console.error(`❌ Failed to delete file ${file.public_id}:`, err);
-          }
+        allFiles.push(...msg.files);
+      }
+      if (msg.replies && msg.replies.length > 0) {
+        allFiles.push(...collectFilesFromReplies(msg.replies as Reply[]));
+      }
+
+      // Delete attached files (Supabase + Cloudinary)
+      for (const file of allFiles) {
+        if (!file.public_id) continue;
+        try {
+          await deleteFileFromSupabase(file.public_id);
+          await deleteFileFromCloudinary(file.public_id);
+        } catch (err) {
+          console.error(`❌ Failed to delete file ${file.public_id}:`, err);
         }
       }
 
       // Delete DB record
       await msg.deleteOne();
 
-      // Notify clients that message was deleted
+      // Notify clients
       await pusher.trigger(`topic-${msg.topic}`, "delete-message", {
         id,
         parentId: null,
@@ -194,6 +214,27 @@ export async function DELETE(req: NextRequest, context: unknown) {
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 
+    // ✅ Delete reply files (Cloudinary + Supabase)
+    let replyFiles: { public_id?: string }[] = [];
+    if (targetReply.files && targetReply.files.length > 0) {
+      replyFiles.push(...targetReply.files);
+    }
+    if (targetReply.replies && targetReply.replies.length > 0) {
+      replyFiles.push(
+        ...collectFilesFromReplies(targetReply.replies as Reply[])
+      );
+    }
+
+    for (const file of replyFiles) {
+      if (!file.public_id) continue;
+      try {
+        await deleteFileFromSupabase(file.public_id);
+        await deleteFileFromCloudinary(file.public_id);
+      } catch (err) {
+        console.error(`❌ Failed to delete reply file ${file.public_id}:`, err);
+      }
+    }
+
     // Remove the reply from nested structure
     const deleted = removeReplyRecursive(parent.replies as Reply[], id, userId);
     if (!deleted) {
@@ -205,7 +246,7 @@ export async function DELETE(req: NextRequest, context: unknown) {
 
     const savedParent = await parent.save();
 
-    // Notify clients of the updated thread
+    // Notify clients
     await pusher.trigger(
       `topic-${parent.topic}`,
       "update-message",

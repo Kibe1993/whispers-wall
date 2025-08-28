@@ -52,6 +52,9 @@ export default function WhisperActions(props: WhisperActionsProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isAuthor = clerkId === user?.id;
 
+  // ✅ NEW: state for fullscreen modal
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   /** Sync message */
   useEffect(() => {
     setEditInput(message || "");
@@ -104,10 +107,9 @@ export default function WhisperActions(props: WhisperActionsProps) {
   };
 
   /** Reply */
-  /** Reply */
   const handleReply = async () => {
     if (!user) return;
-    if (!replyInput.trim() && replyFiles.length === 0) return; // ✅ require at least one
+    if (!replyInput.trim() && replyFiles.length === 0) return;
     try {
       const formData = new FormData();
       formData.append("message", replyInput);
@@ -120,7 +122,6 @@ export default function WhisperActions(props: WhisperActionsProps) {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // ✅ Reset state after sending
       setReplyInput("");
       setReplyFiles([]);
       setShowReplyInput(false);
@@ -130,8 +131,6 @@ export default function WhisperActions(props: WhisperActionsProps) {
       console.error("❌ Failed to reply:", err);
     }
   };
-
-  /** Edit */
 
   /** Edit */
   const handleEdit = async () => {
@@ -204,7 +203,11 @@ export default function WhisperActions(props: WhisperActionsProps) {
               {filesState.map((file, idx) => (
                 <div key={idx}>
                   {file.url.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? (
-                    <img src={file.url} className={styles.fileImage} />
+                    <img
+                      src={file.url}
+                      className={styles.fileImage}
+                      onClick={() => setSelectedImage(file.url)} // ✅ NEW
+                    />
                   ) : file.url.match(/\.(mp4|webm|ogg)$/i) ? (
                     <video
                       src={file.url}
@@ -234,14 +237,16 @@ export default function WhisperActions(props: WhisperActionsProps) {
         </div>
       ) : (
         <>
-          <p className={styles.messageText}>{message}</p>
-
           {filesState?.length > 0 && (
             <div className={styles.filePreviewContainer}>
               {filesState.map((file, idx) => (
                 <div key={idx}>
                   {file.url.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? (
-                    <img src={file.url} className={styles.fileImage} />
+                    <img
+                      src={file.url}
+                      className={styles.fileImage}
+                      onClick={() => setSelectedImage(file.url)} // ✅ NEW
+                    />
                   ) : file.url.match(/\.(mp4|webm|ogg)$/i) ? (
                     <video
                       src={file.url}
@@ -257,45 +262,43 @@ export default function WhisperActions(props: WhisperActionsProps) {
               ))}
             </div>
           )}
+
+          <p className={styles.messageText}>{message}</p>
         </>
       )}
 
-      {/* Action buttons (responsive) */}
+      {/* ✅ Action buttons restored */}
       <div className={`${styles.actions} flex flex-wrap gap-2`}>
-        <button
-          onClick={() => setShowReplies((p) => !p)}
-          className="flex items-center gap-1"
-        >
-          <MessageCircle size={18} />
-          <span className=" sm:inline">{replies.length}</span>
+        <button onClick={handleLike} className={styles.actionBtn}>
+          <Heart size={16} /> {likes?.length || 0}
+        </button>
+        <button onClick={handleDislike} className={styles.actionBtn}>
+          <ThumbsDown size={16} /> {dislikes?.length || 0}
         </button>
         <button
-          onClick={() => setShowReplyInput((p) => !p)}
-          className="flex items-center gap-1"
+          onClick={() => setShowReplyInput((prev) => !prev)}
+          className={styles.actionBtn}
         >
-          <ReplyIcon size={18} />
-          <span className="hidden sm:inline">Reply</span>
+          <ReplyIcon size={16} /> Reply
         </button>
-        <button onClick={handleLike} className="flex items-center gap-1">
-          <Heart size={18} />
-          <span className=" sm:inline">{likes.length}</span>
-        </button>
-        <button onClick={handleDislike} className="flex items-center gap-1">
-          <ThumbsDown size={18} />
-          <span className=" sm:inline">{dislikes.length}</span>
-        </button>
-        {isAuthor && !isEditing && (
+        {replies.length > 0 && (
+          <button
+            onClick={() => setShowReplies((prev) => !prev)}
+            className={styles.actionBtn}
+          >
+            <MessageCircle size={16} /> Replies ({replies.length})
+          </button>
+        )}
+        {isAuthor && (
           <>
             <button
               onClick={() => setIsEditing(true)}
-              className="flex items-center gap-1"
+              className={styles.actionBtn}
             >
-              <Edit size={18} />
-              <span className="hidden sm:inline">Edit</span>
+              <Edit size={16} /> Edit
             </button>
-            <button onClick={handleDelete} className="flex items-center gap-1">
-              <Trash2 size={18} />
-              <span className="hidden sm:inline">Delete</span>
+            <button onClick={handleDelete} className={styles.actionBtn}>
+              <Trash2 size={16} /> Delete
             </button>
           </>
         )}
@@ -310,52 +313,52 @@ export default function WhisperActions(props: WhisperActionsProps) {
             handleReply();
           }}
         >
+          <textarea
+            value={replyInput}
+            onChange={(e) => setReplyInput(e.target.value)}
+            className={styles.replyTextarea}
+            rows={2}
+            placeholder="Write a reply..."
+          />
+
+          <div className={styles.replyFileWrapper}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,video/*"
+              onChange={handleReplyFileChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className={styles.fileUploadBtn}
+            >
+              <Upload size={16} /> Attach
+            </button>
+          </div>
+
           {replyFiles.length > 0 && (
-            <div className={styles.replyPreviewContainer}>
+            <div className={styles.filePreviewContainer}>
               {replyFiles.map((file, idx) => (
-                <div key={idx} className={styles.replyPreviewItem}>
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={file.name}
-                    className={styles.replyPreviewImage}
-                  />
+                <div key={idx} className={styles.filePreview}>
+                  <span>{file.name}</span>
                   <button
                     type="button"
-                    className={styles.replyPreviewRemove}
                     onClick={() => removeReplyFile(idx)}
+                    className={styles.removeFileBtn}
                   >
-                    <X size={16} />
+                    Remove
                   </button>
                 </div>
               ))}
             </div>
           )}
 
-          <div className={styles.replyInput}>
-            <input
-              type="text"
-              value={replyInput}
-              onChange={(e) => setReplyInput(e.target.value)}
-              placeholder="Whisper your reply"
-            />
-
-            <input
-              type="file"
-              multiple
-              onChange={handleReplyFileChange}
-              ref={fileInputRef}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className={styles.uploadBtn}
-            >
-              <Upload size={18} />
-            </button>
-
-            <button type="submit">Reply</button>
-          </div>
+          <button type="submit" className={styles.replySubmitBtn}>
+            Reply
+          </button>
         </form>
       )}
 
@@ -378,6 +381,31 @@ export default function WhisperActions(props: WhisperActionsProps) {
               rootId={rootId}
             />
           ))}
+        </div>
+      )}
+
+      {/* ✅ Fullscreen image modal */}
+      {selectedImage && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setSelectedImage(null)}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={selectedImage}
+              alt="Preview"
+              className={styles.modalImage}
+            />
+            <button
+              className={styles.closeBtn}
+              onClick={() => setSelectedImage(null)}
+            >
+              <X size={24} />
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -28,7 +28,6 @@ export default function ChatPage() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [fileInputKey, setFileInputKey] = useState(0);
   const [autoScroll, setAutoScroll] = useState(true);
 
   // 👇 track scroll position
@@ -75,7 +74,6 @@ export default function ChatPage() {
       setInput("");
       setFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      setFileInputKey((k) => k + 1);
     } catch (err) {
       console.error("❌ Failed to send message:", err);
     }
@@ -97,20 +95,25 @@ export default function ChatPage() {
   };
 
   const handleUploadClick = () => {
-    if (fileInputRef.current) fileInputRef.current.value = "";
     fileInputRef.current?.click();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files;
-    if (!list || list.length === 0) {
-      setFiles([]);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      setFileInputKey((k) => k + 1);
-      return;
+    if (!list || list.length === 0) return;
+
+    // Append new files to existing ones
+    setFiles((prev) => [...prev, ...Array.from(list)]);
+  };
+
+  // Add a function to properly remove files
+  const handleRemoveFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+
+    // Reset the file input to allow re-uploading the same file
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
-    setFiles(Array.from(list));
-    e.target.value = "";
   };
 
   return (
@@ -185,16 +188,7 @@ export default function ChatPage() {
               <button
                 type="button"
                 className={styles.removeBtn}
-                onClick={() =>
-                  setFiles((prev) => {
-                    const next = prev.filter((_, i) => i !== idx);
-                    if (next.length === 0) {
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                      setFileInputKey((k) => k + 1);
-                    }
-                    return next;
-                  })
-                }
+                onClick={() => handleRemoveFile(idx)}
               >
                 ✖
               </button>
@@ -212,7 +206,6 @@ export default function ChatPage() {
         }}
       >
         <input
-          key={fileInputKey}
           type="file"
           ref={fileInputRef}
           style={{ display: "none" }}
