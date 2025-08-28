@@ -3,41 +3,57 @@
 import styles from "./Sidebar.module.css";
 import { useTopic } from "@/library/context/TopicContext";
 import profile from "../../public/profile.png";
-import {
-  UserButton,
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  useUser,
-} from "@clerk/nextjs";
+import { UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Pusher from "pusher-js";
 
 const topics = [
-  { name: "Life", whispers: 16, icon: "🌱" },
-  { name: "Tech", whispers: 5, icon: "💻" },
-  { name: "Secrets", whispers: 6, icon: "🤫" },
-  { name: "Dreams", whispers: 12, icon: "💭" },
-  { name: "Late Night", whispers: 18, icon: "🌙" },
-  { name: "Random", whispers: 8, icon: "🎲" },
-  { name: "Vibes", whispers: 27, icon: "🎧" },
-  { name: "World", whispers: 9, icon: "🌍" },
+  { name: "Life", icon: "🌱" },
+  { name: "Tech", icon: "💻" },
+  { name: "Secrets", icon: "🤫" },
+  { name: "Dreams", icon: "💭" },
+  { name: "Late Night", icon: "🌙" },
+  { name: "Random", icon: "🎲" },
+  { name: "Vibes", icon: "🎧" },
+  { name: "World", icon: "🌍" },
 ];
 
 export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
   const { activeTopic, setActiveTopic } = useTopic();
   const [counts, setCounts] = useState<Record<string, number>>({});
+
+  // fetch counts
+  const fetchCounts = async () => {
+    try {
+      const res = await axios.get("/api/counts");
+      setCounts(res.data);
+    } catch (err) {
+      console.error("Failed to fetch topic counts:", err);
+    }
+  };
+
   useEffect(() => {
-    const fetchCounts = async () => {
-      try {
-        const res = await axios.get("/api/counts");
-        setCounts(res.data);
-      } catch (err) {
-        console.error("Failed to fetch topic counts:", err);
-      }
-    };
     fetchCounts();
+
+    // Pusher real-time updates
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    });
+
+    topics.forEach((topic) => {
+      const channel = pusher.subscribe(`topic-${topic.name}`);
+      channel.bind("new-message", () => {
+        fetchCounts(); // refresh counts whenever a new message is added
+      });
+    });
+
+    return () => {
+      topics.forEach((topic) => {
+        pusher.unsubscribe(`topic-${topic.name}`);
+      });
+    };
   }, []);
 
   return (
@@ -69,7 +85,6 @@ export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
                 <div className={styles.icon}>{topic.icon}</div>
                 <div>
                   <p className={styles.topicName}>{topic.name}</p>
-                  {/* Use dynamic count with fallback to 0 */}
                   <p className={styles.whispers}>
                     {counts[topic.name] || 0} Whispers
                   </p>

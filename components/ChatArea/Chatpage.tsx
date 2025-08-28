@@ -23,6 +23,7 @@ export default function ChatPage() {
 
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
@@ -47,12 +48,26 @@ export default function ChatPage() {
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // 👇 auto-scroll effect
+  // 👇 Improved auto-scroll effect
   useEffect(() => {
-    if (autoScroll && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (!messagesEndRef.current) return;
+
+    // Always scroll to bottom on initial load
+    if (isInitialLoad && messages.length > 0) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+        setIsInitialLoad(false);
+      }, 100);
+      return;
     }
-  }, [messages, autoScroll]);
+
+    // Only auto-scroll if user is at bottom or it's a new message
+    if (autoScroll) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    }
+  }, [messages, autoScroll, isInitialLoad]);
 
   // 👇 send new message
   const handleSend = async () => {
