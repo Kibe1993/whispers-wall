@@ -1,4 +1,4 @@
-import { uploadImageToCloudinary } from "@/lib/cloudinary/uploadImage";
+import { uploadMediaToCloudinary } from "@/lib/cloudinary/uploadImage";
 import { connectDB } from "@/lib/DB/connectDB";
 import MessageModel from "@/lib/Models/message";
 import { pusher } from "@/lib/Pusher/pusher";
@@ -40,11 +40,25 @@ export async function POST(req: Request) {
         public_id: string;
       };
 
-      if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
-        const uploaded = await uploadImageToCloudinary(
+      if (file.type.startsWith("image/")) {
+        const uploaded = await uploadMediaToCloudinary(
           buffer,
           filename,
-          `topics/${topic}`
+          `topics/${topic}`,
+          "image"
+        );
+        uploadedFile = {
+          url: uploaded.url,
+          public_id: uploaded.public_id,
+          name: filename,
+          type: file.type,
+        };
+      } else if (file.type.startsWith("video/")) {
+        const uploaded = await uploadMediaToCloudinary(
+          buffer,
+          filename,
+          `topics/${topic}`,
+          "video"
         );
         uploadedFile = {
           url: uploaded.url,
@@ -58,7 +72,6 @@ export async function POST(req: Request) {
           filename,
           `topics/${topic}`
         );
-
         uploadedFile = {
           url,
           public_id,
@@ -91,7 +104,8 @@ export async function POST(req: Request) {
     await pusher.trigger(`topic-${topic}`, "new-message", newMessage);
 
     return NextResponse.json(newMessage, { status: 201 });
-  } catch {
+  } catch (err) {
+    console.error("❌ Error in POST /api/messages:", err);
     return NextResponse.json(
       { error: "Failed to save message" },
       { status: 500 }

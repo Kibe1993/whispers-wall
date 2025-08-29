@@ -62,7 +62,7 @@
 
 .fileVideo {
   max-width: 300px;
-  max-height: 200px;
+  height: auto;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
@@ -336,6 +336,45 @@
   padding: 6px;
   border-radius: 50%;
   color: white;
+}
+.fileAttachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.filePreviewItem {
+  position: relative;
+}
+
+.fileImage {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 8px;
+  cursor: pointer;
+  object-fit: cover;
+}
+
+.fileVideo {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 8px;
+}
+
+.fileLink {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: #f0f0f0;
+  border-radius: 6px;
+  color: #333;
+  text-decoration: none;
+}
+
+.fileLink:hover {
+  background: #e0e0e0;
 }
 
 /* 📱 Mobile tweaks */

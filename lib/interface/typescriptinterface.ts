@@ -4,27 +4,34 @@ export interface FileMeta {
   public_id?: string; // ✅ optional to support non-Cloudinary files
 }
 
+export interface PreviewFile extends FileMeta {
+  name: string;
+  type: string;
+  preview?: boolean;
+}
+
 export interface Reply {
   _id: string;
   clerkId: string;
-  message?: string; // ✅ optional, matches schema (files-only replies allowed)
-  createdAt: string; // ✅ always present from Mongo
+  message?: string;
+  createdAt: string;
   likes: string[];
   dislikes: string[];
   replies: Reply[];
-  files?: FileMeta[];
+  files?: (FileMeta | PreviewFile)[];
 }
 
 export interface Message {
   _id: string;
-  message?: string; // ✅ optional
+  message?: string;
   topic: string;
   clerkId: string;
   createdAt: string;
   likes: string[];
   dislikes: string[];
   replies: Reply[];
-  files?: FileMeta[];
+  files?: (FileMeta | PreviewFile)[]; // <-- union type
+  status?: "uploading" | "uploaded" | "failed";
 }
 
 export interface WhisperProps {

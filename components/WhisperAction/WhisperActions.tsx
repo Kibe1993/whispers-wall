@@ -15,10 +15,14 @@ import {
   Edit,
   Trash2,
   Reply as ReplyIcon,
+  File,
+  Image,
+  Video,
 } from "lucide-react";
 
 interface WhisperActionsProps extends WhisperProps {
   rootId?: string;
+  isAnonymous?: boolean;
 }
 
 export default function WhisperActions(props: WhisperActionsProps) {
@@ -35,9 +39,10 @@ export default function WhisperActions(props: WhisperActionsProps) {
     onUpdate,
     onDelete,
     rootId: rootIdFromParent,
+    isAnonymous = false,
   } = props;
 
-  const { user } = useUser();
+  const { user, isLoaded: isUserLoaded } = useUser();
   const rootId = rootIdFromParent || _id;
 
   const [showReplies, setShowReplies] = useState(false);
@@ -47,23 +52,23 @@ export default function WhisperActions(props: WhisperActionsProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editInput, setEditInput] = useState(message || "");
   const [relativeTime, setRelativeTime] = useState("");
-  const [filesState, setFilesState] = useState(files || []);
+  const [isLiking, setIsLiking] = useState(false);
+  const [isDisliking, setIsDisliking] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const isAuthor = clerkId === user?.id;
 
-  // ✅ NEW: state for fullscreen modal
+  // Check if user is author only when user data is loaded
+  const isAuthor = isUserLoaded && user && clerkId && clerkId === user.id;
+
+  // State for fullscreen modal
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   /** Sync message */
   useEffect(() => {
     setEditInput(message || "");
   }, [message]);
-
-  /** Sync files */
-  useEffect(() => {
-    setFilesState(files || []);
-  }, [files]);
 
   /** Time updater */
   useEffect(() => {
@@ -80,8 +85,9 @@ export default function WhisperActions(props: WhisperActionsProps) {
 
   /** Like */
   const handleLike = async () => {
-    if (!user) return;
+    if (!user || isLiking) return;
     try {
+      setIsLiking(true);
       const res = await axios.post(`/api/messages/${_id}/likes`, {
         clerkId: user.id,
         parentId: rootId,
@@ -89,13 +95,16 @@ export default function WhisperActions(props: WhisperActionsProps) {
       onUpdate(res.data);
     } catch (err) {
       console.error("❌ Failed to like:", err);
+    } finally {
+      setIsLiking(false);
     }
   };
 
   /** Dislike */
   const handleDislike = async () => {
-    if (!user) return;
+    if (!user || isDisliking) return;
     try {
+      setIsDisliking(true);
       const res = await axios.post(`/api/messages/${_id}/dislikes`, {
         clerkId: user.id,
         parentId: rootId,
@@ -103,23 +112,44 @@ export default function WhisperActions(props: WhisperActionsProps) {
       onUpdate(res.data);
     } catch (err) {
       console.error("❌ Failed to dislike:", err);
+    } finally {
+      setIsDisliking(false);
     }
   };
 
   /** Reply */
   const handleReply = async () => {
-    if (!user) return;
+    if (!user || isReplying) return;
     if (!replyInput.trim() && replyFiles.length === 0) return;
     try {
-      const formData = new FormData();
-      formData.append("message", replyInput);
-      formData.append("clerkId", user.id);
-      if (_id !== rootId) formData.append("parentReplyId", _id);
+      setIsReplying(true);
 
-      replyFiles.forEach((file) => formData.append("files", file));
+      // Upload files first if any
+      let uploadedUrls: string[] = [];
+      if (replyFiles.length > 0) {
+        const formData = new FormData();
+        replyFiles.forEach((file) => formData.append("file", file));
+        formData.append(
+          "upload_preset",
+          process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET as string
+        );
 
-      const res = await axios.post(`/api/messages/${rootId}/reply`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        const uploadResponse = await axios.post(
+          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
+          formData,
+          { headers: { "Content-Type": "multipart/form-data" } }
+        );
+
+        uploadedUrls = uploadResponse.data.secure_urls || [
+          uploadResponse.data.secure_url,
+        ];
+      }
+
+      const res = await axios.post(`/api/messages/${rootId}/reply`, {
+        message: replyInput,
+        clerkId: user.id,
+        parentReplyId: _id !== rootId ? _id : undefined,
+        files: uploadedUrls.map((url) => ({ url })),
       });
 
       setReplyInput("");
@@ -129,6 +159,8 @@ export default function WhisperActions(props: WhisperActionsProps) {
       onUpdate(res.data);
     } catch (err) {
       console.error("❌ Failed to reply:", err);
+    } finally {
+      setIsReplying(false);
     }
   };
 
@@ -138,7 +170,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
     try {
       const res = await axios.patch(`/api/messages/${_id}`, {
         message: editInput,
-        files: filesState,
+        files: files,
         parentId: rootId,
       });
       onUpdate(res.data);
@@ -149,19 +181,22 @@ export default function WhisperActions(props: WhisperActionsProps) {
   };
 
   /** Delete */
-  const handleDelete = async () => {
-    if (!user) return;
+  const handleDeleteAction = async () => {
+    if (!user || isDeleting) return;
     if (!confirm("Are you sure you want to delete this?")) return;
 
     try {
+      setIsDeleting(true);
       await axios.delete(`/api/messages/${_id}`, {
         data: { parentId: rootId },
       });
 
-      const res = await axios.get(`/api/messages?topic=${topic}`);
-      onUpdate(res.data);
+      // Call onDelete with proper parameters
+      onDelete(_id, rootId !== _id ? rootId : undefined);
     } catch (err) {
       console.error("❌ Failed to delete:", err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -177,12 +212,63 @@ export default function WhisperActions(props: WhisperActionsProps) {
     setReplyFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Function to render file previews properly
+  const renderFilePreview = (file: any) => {
+    if (!file.url) return null;
+
+    const url = file.url;
+    const isImage = /\.(jpeg|jpg|png|gif|webp)$/i.test(url);
+    const isVideo = /\.(mp4|webm|ogg)$/i.test(url);
+
+    if (isImage) {
+      return (
+        <div className={styles.filePreviewItem} key={file._id || url}>
+          <img
+            src={url}
+            alt="Attachment"
+            className={styles.fileImage}
+            onClick={() => setSelectedImage(url)}
+          />
+        </div>
+      );
+    } else if (isVideo) {
+      return (
+        <div className={styles.filePreviewItem} key={file._id || url}>
+          <video src={url} controls className={styles.fileVideo} />
+        </div>
+      );
+    } else {
+      return (
+        <div className={styles.filePreviewItem} key={file._id || url}>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.fileLink}
+          >
+            <File size={16} />
+            <span>Download File</span>
+          </a>
+        </div>
+      );
+    }
+  };
+
+  // Don't render anything if user data isn't loaded yet
+  if (!isUserLoaded) {
+    return <div className={styles.loading}>Loading...</div>;
+  }
+
   return (
-    <div className={styles.whisperContainer}>
+    <div
+      className={`${styles.whisperContainer} ${
+        isAnonymous ? styles.anonymous : ""
+      }`}
+    >
       {/* Meta */}
       <div className={styles.meta}>
         <span className={styles.username}>
-          @{clerkId?.slice(0, 10) || "anon"}
+          {isAnonymous ? "Anonymous" : `@${clerkId?.slice(0, 10) || "unknown"}`}
         </span>
         <span className={styles.dot}>·</span>
         <span className={styles.timestamp}>{relativeTime}</span>
@@ -197,29 +283,6 @@ export default function WhisperActions(props: WhisperActionsProps) {
             className={styles.editTextarea}
             rows={3}
           />
-
-          {filesState?.length > 0 && (
-            <div className={styles.filePreviewContainer}>
-              {filesState.map((file, idx) => (
-                <div key={idx}>
-                  {file.url.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? (
-                    <img
-                      src={file.url}
-                      className={styles.fileImage}
-                      onClick={() => setSelectedImage(file.url)} // ✅ NEW
-                    />
-                  ) : file.url.match(/\.(mp4|webm|ogg)$/i) ? (
-                    <video
-                      src={file.url}
-                      controls
-                      className={styles.fileVideo}
-                    />
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          )}
-
           <div className={styles.editActions}>
             <button onClick={handleEdit} className={styles.saveBtn}>
               Save
@@ -237,29 +300,10 @@ export default function WhisperActions(props: WhisperActionsProps) {
         </div>
       ) : (
         <>
-          {filesState?.length > 0 && (
-            <div className={styles.filePreviewContainer}>
-              {filesState.map((file, idx) => (
-                <div key={idx}>
-                  {file.url.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? (
-                    <img
-                      src={file.url}
-                      className={styles.fileImage}
-                      onClick={() => setSelectedImage(file.url)} // ✅ NEW
-                    />
-                  ) : file.url.match(/\.(mp4|webm|ogg)$/i) ? (
-                    <video
-                      src={file.url}
-                      controls
-                      className={styles.fileVideo}
-                    />
-                  ) : (
-                    <a href={file.url} target="_blank" rel="noreferrer">
-                      📎 Attachment {idx + 1}
-                    </a>
-                  )}
-                </div>
-              ))}
+          {/* File attachments */}
+          {files && files.length > 0 && (
+            <div className={styles.fileAttachments}>
+              {files.map(renderFilePreview)}
             </div>
           )}
 
@@ -267,17 +311,34 @@ export default function WhisperActions(props: WhisperActionsProps) {
         </>
       )}
 
-      {/* ✅ Action buttons restored */}
-      <div className={`${styles.actions} flex flex-wrap gap-2`}>
-        <button onClick={handleLike} className={styles.actionBtn}>
-          <Heart size={16} /> {likes?.length || 0}
+      {/* Action buttons */}
+      <div className={styles.actions}>
+        <button
+          onClick={handleLike}
+          className={styles.actionBtn}
+          disabled={isLiking || isAnonymous}
+        >
+          <Heart
+            size={16}
+            fill={likes?.includes(user?.id || "") ? "currentColor" : "none"}
+          />
+          {likes?.length || 0}
         </button>
-        <button onClick={handleDislike} className={styles.actionBtn}>
-          <ThumbsDown size={16} /> {dislikes?.length || 0}
+        <button
+          onClick={handleDislike}
+          className={styles.actionBtn}
+          disabled={isDisliking || isAnonymous}
+        >
+          <ThumbsDown
+            size={16}
+            fill={dislikes?.includes(user?.id || "") ? "currentColor" : "none"}
+          />
+          {dislikes?.length || 0}
         </button>
         <button
           onClick={() => setShowReplyInput((prev) => !prev)}
           className={styles.actionBtn}
+          disabled={isAnonymous}
         >
           <ReplyIcon size={16} /> Reply
         </button>
@@ -289,7 +350,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
             <MessageCircle size={16} /> Replies ({replies.length})
           </button>
         )}
-        {isAuthor && (
+        {isAuthor && !isAnonymous && (
           <>
             <button
               onClick={() => setIsEditing(true)}
@@ -297,8 +358,12 @@ export default function WhisperActions(props: WhisperActionsProps) {
             >
               <Edit size={16} /> Edit
             </button>
-            <button onClick={handleDelete} className={styles.actionBtn}>
-              <Trash2 size={16} /> Delete
+            <button
+              onClick={handleDeleteAction}
+              className={styles.actionBtn}
+              disabled={isDeleting}
+            >
+              <Trash2 size={16} /> {isDeleting ? "Deleting..." : "Delete"}
             </button>
           </>
         )}
@@ -338,8 +403,13 @@ export default function WhisperActions(props: WhisperActionsProps) {
               value={replyInput}
               onChange={(e) => setReplyInput(e.target.value)}
               placeholder="Write a reply..."
+              disabled={isReplying}
             />
-            <button type="button" onClick={() => fileInputRef.current?.click()}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isReplying}
+            >
               <Upload size={16} />
             </button>
             <input
@@ -350,7 +420,9 @@ export default function WhisperActions(props: WhisperActionsProps) {
               onChange={handleReplyFileChange}
               className="hidden"
             />
-            <button type="submit">Reply</button>
+            <button type="submit" disabled={isReplying}>
+              {isReplying ? "Replying..." : "Reply"}
+            </button>
           </div>
         </form>
       )}
@@ -372,12 +444,13 @@ export default function WhisperActions(props: WhisperActionsProps) {
               onUpdate={onUpdate}
               onDelete={onDelete}
               rootId={rootId}
+              isAnonymous={!r.clerkId}
             />
           ))}
         </div>
       )}
 
-      {/* ✅ Fullscreen image modal */}
+      {/* Fullscreen image modal */}
       {selectedImage && (
         <div
           className={styles.modalOverlay}

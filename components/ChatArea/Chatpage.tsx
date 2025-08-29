@@ -8,8 +8,13 @@ import styles from "./Chatpage.module.css";
 import { Send, Upload } from "lucide-react";
 import fallback from "../../public/WhispersLogo.png";
 import Image from "next/image";
+import { v4 as uuidv4 } from "uuid";
 import WhisperActions from "../WhisperAction/WhisperActions";
-import { Message } from "@/lib/interface/typescriptinterface";
+import {
+  Message,
+  PreviewFile,
+  FileMeta,
+} from "@/lib/interface/typescriptinterface";
 import {
   mergeUpdatedMessage,
   removeReplyRecursively,
@@ -19,11 +24,12 @@ import { useMessages } from "@/app/hooks/useMessages";
 export default function ChatPage() {
   const { activeTopic } = useTopic();
   const { user } = useUser();
-  const { messages, setMessages } = useMessages(activeTopic);
+  const { messages, setMessages, isLoading } = useMessages(activeTopic);
 
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isSending, setIsSending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
@@ -31,7 +37,7 @@ export default function ChatPage() {
 
   const [autoScroll, setAutoScroll] = useState(true);
 
-  // 👇 track scroll position
+  // Scroll tracking
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
@@ -48,11 +54,10 @@ export default function ChatPage() {
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // 👇 Improved auto-scroll effect
+  // Auto-scroll effect
   useEffect(() => {
     if (!messagesEndRef.current) return;
 
-    // Always scroll to bottom on initial load
     if (isInitialLoad && messages.length > 0) {
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
@@ -61,7 +66,6 @@ export default function ChatPage() {
       return;
     }
 
-    // Only auto-scroll if user is at bottom or it's a new message
     if (autoScroll) {
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -69,32 +73,60 @@ export default function ChatPage() {
     }
   }, [messages, autoScroll, isInitialLoad]);
 
-  // 👇 send new message
+  // Send message
   const handleSend = async () => {
     if ((!input.trim() && files.length === 0) || !activeTopic || !user) return;
+
+    setIsSending(true);
+    const tempId = `temp-${uuidv4()}`;
+    const tempMessage: Message = {
+      _id: tempId,
+      clerkId: user.id,
+      message: input,
+      topic: activeTopic,
+      createdAt: new Date().toISOString(),
+      likes: [],
+      dislikes: [],
+      replies: [],
+      status: "uploading",
+      files: files.map((file) => ({
+        _id: `temp-file-${uuidv4()}`,
+        name: file.name,
+        type: file.type,
+        url: URL.createObjectURL(file),
+        preview: true,
+      })) as PreviewFile[],
+    };
+
+    setMessages((prev) => [...prev, tempMessage]);
+    setInput("");
+    setFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
 
     const formData = new FormData();
     formData.append("message", input);
     formData.append("topic", activeTopic);
     formData.append("clerkId", user.id);
-
-    files.forEach((file) => {
-      formData.append("files", file);
-    });
+    files.forEach((file) => formData.append("files", file));
 
     try {
-      await axios.post("/api/messages", formData, {
+      const { data: newMessage } = await axios.post("/api/messages", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      setInput("");
-      setFiles([]);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setMessages((prev) =>
+        prev.map((m) => (m._id === tempId ? newMessage : m))
+      );
     } catch (err) {
       console.error("❌ Failed to send message:", err);
+      setMessages((prev) =>
+        prev.map((m) => (m._id === tempId ? { ...m, status: "failed" } : m))
+      );
+    } finally {
+      setIsSending(false);
     }
   };
 
-  // 👇 update / delete helpers
+  // Update / delete helpers
   const handleUpdate = (updatedMsg: Message) => {
     setMessages((prev) => mergeUpdatedMessage(prev, updatedMsg));
   };
@@ -116,19 +148,12 @@ export default function ChatPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files;
     if (!list || list.length === 0) return;
-
-    // Append new files to existing ones
     setFiles((prev) => [...prev, ...Array.from(list)]);
   };
 
-  // Add a function to properly remove files
   const handleRemoveFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
-
-    // Reset the file input to allow re-uploading the same file
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
@@ -139,8 +164,16 @@ export default function ChatPage() {
       </div>
 
       {/* Messages */}
-      <div ref={messagesContainerRef} className={styles.messages}>
-        {messages.length === 0 ? (
+      <div
+        ref={messagesContainerRef}
+        className={`${styles.messages} ${isLoading ? styles.loading : ""}`}
+      >
+        {isLoading ? (
+          <div className={styles.loadingContainer}>
+            <div className={styles.spinner}></div>
+            <p>Loading whispers...</p>
+          </div>
+        ) : messages.length === 0 ? (
           <div className={styles.fallbackText}>
             <h3>No whispers yet for {activeTopic}</h3>
             <Image src={fallback} alt="Fallback Image" />
@@ -158,6 +191,46 @@ export default function ChatPage() {
                   isUser ? styles.user : styles.other
                 }`}
               >
+                {/* File previews inside messages */}
+                {msg.files?.map((file) => {
+                  if ("type" in file && "name" in file) {
+                    return (
+                      <div key={file._id} className={styles.previewWrapper}>
+                        {file.type.startsWith("image/") && (
+                          <div className={styles.previewImageWrapper}>
+                            <img
+                              src={file.url}
+                              alt={file.name}
+                              className={`${styles.previewImage} ${
+                                msg.status === "uploading" ? styles.blur : ""
+                              }`}
+                            />
+                            {msg.status === "uploading" && (
+                              <div className={styles.uploadSpinner}></div>
+                            )}
+                          </div>
+                        )}
+                        {file.type.startsWith("video/") && (
+                          <div className={styles.previewVideoWrapper}>
+                            <video
+                              src={file.url}
+                              className={`${styles.previewVideo} ${
+                                msg.status === "uploading" ? styles.blur : ""
+                              }`}
+                              controls={msg.status !== "uploading"}
+                            />
+                            {msg.status === "uploading" && (
+                              <div className={styles.uploadSpinner}></div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+
+                {/* Message content */}
                 <WhisperActions
                   _id={msg._id}
                   message={msg.message}
@@ -178,7 +251,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* File preview */}
+      {/* File preview for new files */}
       {files.length > 0 && (
         <div className={styles.filePreview}>
           {files.map((file, idx) => (
@@ -198,7 +271,6 @@ export default function ChatPage() {
               ) : (
                 <div className={styles.fileIcon}>📄</div>
               )}
-
               <span className={styles.fileName}>{file.name}</span>
               <button
                 type="button"
@@ -227,25 +299,33 @@ export default function ChatPage() {
           multiple
           accept="image/*,video/*,.pdf"
           onChange={handleFileChange}
+          disabled={isSending}
         />
-
         <button
           type="button"
           className={styles.uploadBtn}
           onClick={handleUploadClick}
+          disabled={isSending}
         >
           <Upload size={20} />
         </button>
-
         <input
           type="text"
           placeholder="Type your message..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          disabled={isSending}
         />
-
-        <button type="submit" className={styles.sendBtn}>
-          <Send size={20} />
+        <button
+          type="submit"
+          className={styles.sendBtn}
+          disabled={isSending || (!input.trim() && files.length === 0)}
+        >
+          {isSending ? (
+            <div className={styles.sendSpinner}></div>
+          ) : (
+            <Send size={20} />
+          )}
         </button>
       </form>
     </div>
