@@ -4,7 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import axios from "axios";
 import styles from "./WhisperActions.module.css";
-import { WhisperProps, Reply } from "@/lib/interface/typescriptinterface";
+import {
+  WhisperProps,
+  Reply,
+  FileMeta,
+} from "@/lib/interface/typescriptinterface";
 import { formatDistanceToNow } from "date-fns";
 import {
   Upload,
@@ -213,7 +217,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
   };
 
   // Function to render file previews properly
-  const renderFilePreview = (file: any) => {
+  const renderFilePreview = (file: FileMeta) => {
     if (!file.url) return null;
 
     const url = file.url;
