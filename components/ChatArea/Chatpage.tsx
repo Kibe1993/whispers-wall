@@ -24,7 +24,8 @@ import { useMessages } from "@/app/hooks/useMessages";
 export default function ChatPage() {
   const { activeTopic } = useTopic();
   const { user } = useUser();
-  const { messages, setMessages, isLoading } = useMessages(activeTopic);
+  const { messages, setMessages, isLoading, justSentIds } =
+    useMessages(activeTopic);
 
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -113,9 +114,21 @@ export default function ChatPage() {
       const { data: newMessage } = await axios.post("/api/messages", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      setMessages((prev) =>
-        prev.map((m) => (m._id === tempId ? newMessage : m))
-      );
+
+      // mark so the forthcoming Pusher echo is ignored
+      if (justSentIds?.current) {
+        justSentIds.current.add(newMessage._id);
+      }
+
+      // de-dupe no matter the arrival order:
+      // - remove temp
+      // - remove any real copy Pusher may have already inserted
+      setMessages((prev) => {
+        const filtered = prev.filter(
+          (m) => m._id !== tempId && m._id !== newMessage._id
+        );
+        return [...filtered, newMessage];
+      });
     } catch (err) {
       console.error("❌ Failed to send message:", err);
       setMessages((prev) =>
