@@ -9,10 +9,8 @@ import { uploadFileToSupabase } from "@/lib/supabase/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { uploadMediaToCloudinary } from "@/lib/cloudinary/uploadImage";
 
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: NextRequest, context: unknown) {
+  const { params } = context as { params: { id: string } };
   await connectDB();
 
   const { userId } = await auth();
