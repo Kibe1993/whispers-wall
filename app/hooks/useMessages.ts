@@ -14,6 +14,7 @@ export function useMessages(activeTopic: string | null) {
   const queryClient = useQueryClient();
   const justSentIds = useRef<Set<string>>(new Set());
 
+  // Fetch messages from the server
   const fetchMessages = async (): Promise<Message[]> => {
     if (!activeTopic) return [];
     const res = await axios.get<Message[]>(
@@ -28,7 +29,7 @@ export function useMessages(activeTopic: string | null) {
     enabled: !!activeTopic,
   });
 
-  // Set up Pusher
+  // Set up Pusher for real-time updates
   useEffect(() => {
     if (!activeTopic) return;
 
@@ -38,21 +39,30 @@ export function useMessages(activeTopic: string | null) {
 
     const channel = pusher.subscribe(`topic-${activeTopic}`);
 
+    // New message handler
     channel.bind("new-message", (message: Message) => {
-      if (justSentIds.current.has(message._id)) {
-        justSentIds.current.delete(message._id);
-        return;
-      }
-
       queryClient.setQueryData<Message[]>(
         ["messages", activeTopic],
         (old = []) => {
-          const exists = old.some((m) => m._id === message._id);
-          return exists ? old : [...old, message];
+          // If this message was just sent locally, replace the optimistic one
+          const idx = old.findIndex((m) => justSentIds.current.has(m._id));
+          if (idx >= 0) {
+            justSentIds.current.delete(old[idx]._id);
+            const newArr = [...old];
+            newArr[idx] = message;
+            return newArr;
+          }
+
+          // If message already exists, do nothing
+          if (old.some((m) => m._id === message._id)) return old;
+
+          // Otherwise, add new message
+          return [...old, message];
         }
       );
     });
 
+    // Message update handler
     channel.bind("update-message", (updatedMsg: Message) => {
       queryClient.setQueryData<Message[]>(
         ["messages", activeTopic],
@@ -60,6 +70,7 @@ export function useMessages(activeTopic: string | null) {
       );
     });
 
+    // Message delete handler
     channel.bind(
       "delete-message",
       (data: { id: string; parentId: string | null }) => {
@@ -78,6 +89,7 @@ export function useMessages(activeTopic: string | null) {
       }
     );
 
+    // Cleanup
     return () => {
       channel.unbind_all();
       channel.unsubscribe();
@@ -85,7 +97,7 @@ export function useMessages(activeTopic: string | null) {
     };
   }, [activeTopic, queryClient]);
 
-  // Expose a manual refresh function
+  // Manual refresh
   const refreshMessages = () =>
     queryClient.invalidateQueries({ queryKey: ["messages", activeTopic] });
 

@@ -10,6 +10,7 @@ import WhisperContent from "./whisper/WhisperContent";
 import WhisperActionsBar from "./whisper/WhisperActionBar";
 import ReplyInput from "./whisper/ReplyInput";
 import ImageModal from "./whisper/ImageModal";
+import { FileMeta } from "@/lib/interface/typescriptinterface";
 
 import * as handlers from "../WhisperAction/whisper/handler";
 
@@ -54,8 +55,10 @@ export default function WhisperActions({
     isUserLoaded && user && clerkId && clerkId === user.id
   );
 
+  // Update edit input when message changes
   useEffect(() => setEditInput(message || ""), [message]);
 
+  // Update relative time
   useEffect(() => {
     if (!createdAt) return;
     const updateTime = () =>
@@ -67,11 +70,17 @@ export default function WhisperActions({
     return () => clearInterval(interval);
   }, [createdAt]);
 
+  // Scroll to this message container
+  const scrollToBottom = () => {
+    containerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  };
+
+  // Scroll after text or replies update, but not during editing or reply input
   useEffect(() => {
-    if (containerRef.current && !isEditing && !showReplyInput) {
-      containerRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (!isEditing && !showReplyInput) {
+      scrollToBottom();
     }
-  }, [message, files, replies, isEditing, showReplyInput]);
+  }, [message, replies, isEditing, showReplyInput]);
 
   if (!isUserLoaded) return <div className={styles.loading}>Loading...</div>;
 
@@ -99,6 +108,8 @@ export default function WhisperActions({
         _id={_id}
         rootId={rootId}
         setSelectedImage={setSelectedImage}
+        // Pass scroll callback for media
+        onMediaLoad={scrollToBottom}
       />
 
       <WhisperActionsBar

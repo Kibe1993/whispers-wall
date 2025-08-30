@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import styles from "../WhisperActions.module.css";
 import FilePreview from "./FilePreview";
-import { FileMeta, WhisperProps } from "@/lib/interface/typescriptinterface";
+import { FileMeta } from "@/lib/interface/typescriptinterface";
 import { Message } from "@/lib/interface/typescriptinterface";
 
 interface WhisperContentProps {
@@ -10,12 +10,13 @@ interface WhisperContentProps {
   files: FileMeta[];
   isEditing: boolean;
   editInput: string;
-  setEditInput: (input: string) => void;
-  setIsEditing: (editing: boolean) => void;
-  onUpdate: (data: Message) => void; // <-- change here
+  setEditInput: React.Dispatch<React.SetStateAction<string>>;
+  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
+  onUpdate?: (updatedMessage: Message) => void;
   _id: string;
   rootId: string;
   setSelectedImage: (url: string | null) => void;
+  onMediaLoad?: () => void; // ✅ new scroll callback
 }
 
 export default function WhisperContent({
@@ -29,6 +30,7 @@ export default function WhisperContent({
   _id,
   rootId,
   setSelectedImage,
+  onMediaLoad,
 }: WhisperContentProps) {
   const handleEdit = async () => {
     if (!editInput.trim()) return;
@@ -38,7 +40,7 @@ export default function WhisperContent({
         files: files,
         parentId: rootId,
       });
-      onUpdate(res.data);
+      onUpdate?.(res.data);
       setIsEditing(false);
     } catch (err) {
       console.error("❌ Failed to edit:", err);
@@ -81,6 +83,7 @@ export default function WhisperContent({
               key={file._id || file.url}
               file={file}
               onImageClick={setSelectedImage}
+              onMediaLoad={onMediaLoad} // ✅ pass callback down
             />
           ))}
         </div>

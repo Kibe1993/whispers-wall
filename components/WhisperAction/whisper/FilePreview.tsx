@@ -6,9 +6,14 @@ import { FileMeta, PreviewFile } from "@/lib/interface/typescriptinterface";
 interface FilePreviewProps {
   file: FileMeta | PreviewFile;
   onImageClick: (url: string) => void;
+  onMediaLoad?: () => void; // ✅ new optional callback
 }
 
-export default function FilePreview({ file, onImageClick }: FilePreviewProps) {
+export default function FilePreview({
+  file,
+  onImageClick,
+  onMediaLoad,
+}: FilePreviewProps) {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
 
@@ -36,7 +41,10 @@ export default function FilePreview({ file, onImageClick }: FilePreviewProps) {
             isImageLoaded ? styles.loaded : ""
           }`}
           onClick={() => onImageClick(url)}
-          onLoad={() => setIsImageLoaded(true)}
+          onLoad={() => {
+            setIsImageLoaded(true);
+            onMediaLoad?.(); // ✅ trigger scroll
+          }}
           style={{ display: isImageLoaded ? "block" : "none" }}
         />
       </div>
@@ -58,7 +66,10 @@ export default function FilePreview({ file, onImageClick }: FilePreviewProps) {
           className={`${styles.fileVideo} ${
             isVideoLoaded ? styles.loaded : ""
           }`}
-          onLoadedData={() => setIsVideoLoaded(true)}
+          onLoadedData={() => {
+            setIsVideoLoaded(true);
+            onMediaLoad?.(); // ✅ trigger scroll
+          }}
           style={{ display: isVideoLoaded ? "block" : "none" }}
         />
       </div>

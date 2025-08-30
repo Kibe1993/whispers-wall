@@ -52,7 +52,7 @@ export default function WhisperActionsBar({
     if (isLiking) return;
     try {
       setIsLiking(true);
-      onLike();
+      await onLike();
     } finally {
       setIsLiking(false);
     }
@@ -62,7 +62,7 @@ export default function WhisperActionsBar({
     if (isDisliking) return;
     try {
       setIsDisliking(true);
-      onDislike();
+      await onDislike();
     } finally {
       setIsDisliking(false);
     }
@@ -72,7 +72,7 @@ export default function WhisperActionsBar({
     if (isDeleting) return;
     try {
       setIsDeleting(true);
-      onDelete();
+      await onDelete();
     } finally {
       setIsDeleting(false);
     }

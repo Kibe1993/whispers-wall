@@ -18,7 +18,6 @@ export default function ChatPage() {
   const { activeTopic } = useTopic();
   const { user } = useUser();
   const { messages, isLoading, justSentIds } = useMessages(activeTopic);
-
   const queryClient = useQueryClient();
 
   const [input, setInput] = useState("");
@@ -29,62 +28,61 @@ export default function ChatPage() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const lastMessageCountRef = useRef(0); // Track message count changes
+  const lastMessageIdRef = useRef<string | null>(null);
 
-  // Scroll tracking
+  // Track scroll to enable auto-scroll only when at bottom
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
 
     const handleScroll = () => {
       const threshold = 100;
-      const isAtBottom =
+      setAutoScroll(
         container.scrollHeight - container.scrollTop - container.clientHeight <
-        threshold;
-      setAutoScroll(isAtBottom);
+          threshold
+      );
     };
 
     container.addEventListener("scroll", handleScroll);
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Auto-scroll effect - FIXED
+  // Auto-scroll after messages update
   useEffect(() => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
+    if (!messagesContainerRef.current || isLoading) return;
 
-    // Check if new messages were added
-    const hasNewMessages = messages.length > lastMessageCountRef.current;
-    lastMessageCountRef.current = messages.length;
+    const currentLastMessage = messages[messages.length - 1];
+    const hasNewMessage = currentLastMessage?._id !== lastMessageIdRef.current;
 
-    // On first load, scroll to bottom immediately
-    if (isInitialLoad && !isLoading && messages.length > 0) {
-      setTimeout(() => {
-        container.scrollTop = container.scrollHeight;
-      }, 100);
-      setIsInitialLoad(false);
-      return;
+    if ((hasNewMessage && autoScroll) || messages.length === 1) {
+      requestAnimationFrame(() => {
+        messagesContainerRef.current!.scrollTop =
+          messagesContainerRef.current!.scrollHeight;
+      });
     }
 
-    // Scroll to bottom if auto-scroll is enabled AND new messages were added
-    if (autoScroll && hasNewMessages) {
-      setTimeout(() => {
-        container.scrollTop = container.scrollHeight;
-      }, 50);
-    }
-  }, [messages, autoScroll, isInitialLoad, isLoading]);
+    if (currentLastMessage) lastMessageIdRef.current = currentLastMessage._id;
+  }, [messages, autoScroll, isLoading]);
 
-  // Send message with optimistic UI
+  // Scroll after all media in a message are loaded
+  const handleMediaLoad = () => {
+    if (autoScroll && messagesContainerRef.current) {
+      requestAnimationFrame(() => {
+        messagesContainerRef.current!.scrollTop =
+          messagesContainerRef.current!.scrollHeight;
+      });
+    }
+  };
+
   const handleSend = async () => {
     if ((!input.trim() && files.length === 0) || !activeTopic || !user) return;
-
     setIsSending(true);
 
-    // Clear input & files immediately so user can select new files
-    setInput("");
-    setFiles([]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    const container = messagesContainerRef.current;
+    const wasAtBottom = container
+      ? container.scrollHeight - container.scrollTop - container.clientHeight <
+        100
+      : false;
 
     const tempId = `temp-${uuidv4()}`;
     const tempMessage: Message = {
@@ -106,12 +104,15 @@ export default function ChatPage() {
       })) as PreviewFile[],
     };
 
-    // Optimistic UI: add temp message
     justSentIds.current.add(tempId);
     queryClient.setQueryData<Message[]>(
       ["messages", activeTopic],
       (old = []) => [...old, tempMessage]
     );
+
+    setInput("");
+    setFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
 
     const formData = new FormData();
     formData.append("message", input || "");
@@ -124,12 +125,14 @@ export default function ChatPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Replace temp message with real message
       queryClient.setQueryData<Message[]>(
         ["messages", activeTopic],
         (old = []) => old.map((m) => (m._id === tempId ? newMessage : m))
       );
+
       justSentIds.current.add(newMessage._id);
+
+      if (wasAtBottom) handleMediaLoad();
     } catch (err) {
       console.error("❌ Failed to send message:", err);
       queryClient.setQueryData<Message[]>(
@@ -138,16 +141,15 @@ export default function ChatPage() {
           old.map((m) => (m._id === tempId ? { ...m, status: "failed" } : m))
       );
     } finally {
-      setIsSending(false); // input is already cleared, user can select new files now
+      setIsSending(false);
     }
   };
 
   const handleUploadClick = () => fileInputRef.current?.click();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    setFiles((prev) => [...prev, ...Array.from(files)]);
+    const newFiles = e.target.files ? Array.from(e.target.files) : [];
+    setFiles((prev) => [...prev, ...newFiles]);
   };
 
   const handleRemoveFile = (index: number) => {
@@ -157,12 +159,10 @@ export default function ChatPage() {
 
   return (
     <div className={styles.chatContainer}>
-      {/* Header */}
       <div className={styles.header}>
         <h2>Whisper Anything About {activeTopic}</h2>
       </div>
 
-      {/* Messages */}
       <div
         ref={messagesContainerRef}
         className={`${styles.messages} ${isLoading ? styles.loading : ""}`}
@@ -191,36 +191,37 @@ export default function ChatPage() {
                 }`}
               >
                 {msg.files?.map((file) => {
-                  if ("type" in file && "name" in file) {
+                  if (!file.type || !file.url) return null;
+                  if (file.type.startsWith("image/")) {
                     return (
                       <div key={file._id} className={styles.previewWrapper}>
-                        {file.type.startsWith("image/") && (
-                          <div className={styles.previewImageWrapper}>
-                            <img
-                              src={file.url}
-                              alt={file.name}
-                              className={`${styles.previewImage} ${
-                                msg.status === "uploading" ? styles.blur : ""
-                              }`}
-                            />
-                            {msg.status === "uploading" && (
-                              <div className={styles.uploadSpinner}></div>
-                            )}
-                          </div>
+                        <img
+                          src={file.url}
+                          alt={file.name}
+                          className={`${styles.previewImage} ${
+                            msg.status === "uploading" ? styles.blur : ""
+                          }`}
+                          onLoad={handleMediaLoad}
+                        />
+                        {msg.status === "uploading" && (
+                          <div className={styles.uploadSpinner}></div>
                         )}
-                        {file.type.startsWith("video/") && (
-                          <div className={styles.previewVideoWrapper}>
-                            <video
-                              src={file.url}
-                              className={`${styles.previewVideo} ${
-                                msg.status === "uploading" ? styles.blur : ""
-                              }`}
-                              controls={msg.status !== "uploading"}
-                            />
-                            {msg.status === "uploading" && (
-                              <div className={styles.uploadSpinner}></div>
-                            )}
-                          </div>
+                      </div>
+                    );
+                  }
+                  if (file.type.startsWith("video/")) {
+                    return (
+                      <div key={file._id} className={styles.previewWrapper}>
+                        <video
+                          src={file.url}
+                          controls={msg.status !== "uploading"}
+                          className={`${styles.previewVideo} ${
+                            msg.status === "uploading" ? styles.blur : ""
+                          }`}
+                          onLoadedData={handleMediaLoad}
+                        />
+                        {msg.status === "uploading" && (
+                          <div className={styles.uploadSpinner}></div>
                         )}
                       </div>
                     );
@@ -249,7 +250,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* File preview for new files */}
+      {/* File preview */}
       {files.length > 0 && (
         <div className={styles.filePreview}>
           {files.map((file, idx) => (
@@ -282,7 +283,6 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Input bar */}
       <form
         className={styles.inputBar}
         onSubmit={(e) => {
