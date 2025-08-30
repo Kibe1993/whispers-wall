@@ -349,8 +349,8 @@
 }
 
 .fileImage {
-  max-width: 200px;
-  max-height: 150px;
+  max-width: 300px;
+  max-height: 250px;
   border-radius: 8px;
   cursor: pointer;
   object-fit: cover;
@@ -358,7 +358,6 @@
 
 .fileVideo {
   max-width: 200px;
-  max-height: 150px;
   border-radius: 8px;
 }
 

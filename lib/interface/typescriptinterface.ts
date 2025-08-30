@@ -2,11 +2,12 @@ export interface FileMeta {
   _id?: string; // ✅ optional because Mongo adds it automatically
   url: string;
   public_id?: string; // ✅ optional to support non-Cloudinary files
+  type: "image" | "video" | "raw";
+  format?: string;
 }
 
 export interface PreviewFile extends FileMeta {
-  name: string;
-  type: string;
+  name?: string;
   preview?: boolean;
 }
 

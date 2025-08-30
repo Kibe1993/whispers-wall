@@ -120,8 +120,6 @@ export default function ChatPage() {
         justSentIds.current.add(newMessage._id);
       }
 
-      // de-dupe no matter the arrival order:
-      // - remove temp
       // - remove any real copy Pusher may have already inserted
       setMessages((prev) => {
         const filtered = prev.filter(

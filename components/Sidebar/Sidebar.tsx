@@ -37,15 +37,19 @@ export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
   useEffect(() => {
     fetchCounts();
 
-    // Pusher real-time updates
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
     });
 
     topics.forEach((topic) => {
       const channel = pusher.subscribe(`topic-${topic.name}`);
+
       channel.bind("new-message", () => {
-        fetchCounts(); // refresh counts whenever a new message is added
+        fetchCounts();
+      });
+
+      channel.bind("delete-message", () => {
+        fetchCounts(); // refresh counts when a whisper is deleted
       });
     });
 

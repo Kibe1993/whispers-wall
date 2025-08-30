@@ -216,13 +216,20 @@ export default function WhisperActions(props: WhisperActionsProps) {
     setReplyFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Function to render file previews properly
-  const renderFilePreview = (file: FileMeta) => {
+  const renderFilePreview = (
+    file: FileMeta & { mimeType?: string; type?: string }
+  ) => {
     if (!file.url) return null;
 
+    // Skip rendering for blob: (local preview handled separately)
+    if (file.url.startsWith("blob:")) return null;
+
     const url = file.url;
-    const isImage = /\.(jpeg|jpg|png|gif|webp)$/i.test(url);
-    const isVideo = /\.(mp4|webm|ogg)$/i.test(url);
+    const type = file.mimeType || file.type || "";
+
+    const isImage =
+      type.startsWith("image/") || /\.(jpeg|jpg|png|gif|webp)$/i.test(url);
+    const isVideo = type.startsWith("video/") || /\.(mp4|webm|ogg)$/i.test(url);
 
     if (isImage) {
       return (
@@ -235,27 +242,24 @@ export default function WhisperActions(props: WhisperActionsProps) {
           />
         </div>
       );
-    } else if (isVideo) {
+    }
+
+    if (isVideo) {
       return (
         <div className={styles.filePreviewItem} key={file._id || url}>
           <video src={url} controls className={styles.fileVideo} />
         </div>
       );
-    } else {
-      return (
-        <div className={styles.filePreviewItem} key={file._id || url}>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.fileLink}
-          >
-            <File size={16} />
-            <span>Download File</span>
-          </a>
-        </div>
-      );
     }
+
+    // Only fallback for non-media docs (pdf, zip, etc)
+    return (
+      <div className={styles.filePreviewItem} key={file._id || url}>
+        <a href={url} target="_blank" rel="noopener noreferrer">
+          <File size={16} /> <span>Download File</span>
+        </a>
+      </div>
+    );
   };
 
   // Don't render anything if user data isn't loaded yet
