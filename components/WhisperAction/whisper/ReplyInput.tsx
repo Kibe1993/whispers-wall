@@ -3,13 +3,14 @@ import axios from "axios";
 import styles from "../WhisperActions.module.css";
 import { Upload } from "lucide-react";
 import { FileMeta, Message } from "@/lib/interface/typescriptinterface"; // adjust path
+import { useUser } from "@clerk/nextjs";
 
 interface ReplyInputProps {
   rootId: string;
   _id: string;
   onUpdate: (data: Message) => void;
   onCancel: () => void;
-  user: { id: string; [key: string]: any };
+  user: ReturnType<typeof useUser>["user"];
 }
 
 export default function ReplyInput({
@@ -20,25 +21,18 @@ export default function ReplyInput({
   user,
 }: ReplyInputProps) {
   const [replyInput, setReplyInput] = useState<string>("");
-  const [replyFiles, setReplyFiles] = useState<FileMeta[]>([]);
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
   const [isReplying, setIsReplying] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleReplyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    const filesArray: FileMeta[] = Array.from(e.target.files).map((file) => ({
-      url: URL.createObjectURL(file),
-      type: file.type.startsWith("image/")
-        ? "image"
-        : file.type.startsWith("video/")
-        ? "video"
-        : "raw",
-      mimeType: file.type,
-      name: file.name,
-      preview: true,
-    }));
-    setReplyFiles(filesArray);
-    e.target.value = "";
+    const filesList = e.target.files;
+    if (!filesList) return;
+
+    const filesArray: File[] = Array.from(filesList);
+    setReplyFiles((prev) => [...prev, ...filesArray]);
+
+    e.target.value = ""; // reset input
   };
 
   const removeReplyFile = (index: number) => {
@@ -54,25 +48,33 @@ export default function ReplyInput({
       let uploadedFiles: FileMeta[] = [];
 
       if (replyFiles.length > 0) {
-        const formData = new FormData();
-        replyFiles.forEach((file) => formData.append("file", file.url)); // actual upload may vary
-        formData.append(
-          "upload_preset",
-          process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET as string
-        );
+        uploadedFiles = await Promise.all(
+          replyFiles.map(async (file) => {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append(
+              "upload_preset",
+              process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET as string
+            );
 
-        const uploadResponse = await axios.post(
-          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
-          formData,
-          { headers: { "Content-Type": "multipart/form-data" } }
-        );
+            const uploadResponse = await axios.post(
+              `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
+              formData,
+              { headers: { "Content-Type": "multipart/form-data" } }
+            );
 
-        uploadedFiles = Array.isArray(uploadResponse.data.secure_urls)
-          ? uploadResponse.data.secure_urls.map((url: string) => ({
-              url,
-              type: "raw",
-            }))
-          : [{ url: uploadResponse.data.secure_url, type: "raw" }];
+            return {
+              url: uploadResponse.data.secure_url,
+              type: file.type.startsWith("image/")
+                ? "image"
+                : file.type.startsWith("video/")
+                ? "video"
+                : "raw",
+              mimeType: file.type,
+              name: file.name,
+            } as FileMeta;
+          })
+        );
       }
 
       const res = await axios.post<Message>(`/api/messages/${rootId}/reply`, {
@@ -104,11 +106,19 @@ export default function ReplyInput({
       <div className={styles.replyPreviewContainer}>
         {replyFiles.map((file, idx) => (
           <div key={idx} className={styles.replyPreviewItem}>
-            <img
-              src={file.url}
-              alt={file.name || "preview"}
-              className={styles.replyPreviewImage}
-            />
+            {file.type.startsWith("image/") ? (
+              <img
+                src={URL.createObjectURL(file)}
+                alt={file.name || "preview"}
+                className={styles.replyPreviewImage}
+              />
+            ) : (
+              <video
+                src={URL.createObjectURL(file)}
+                className={styles.replyPreviewImage}
+                controls
+              />
+            )}
             <button
               type="button"
               onClick={() => removeReplyFile(idx)}

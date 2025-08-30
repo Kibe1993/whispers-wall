@@ -10,33 +10,27 @@ import fallback from "../../public/WhispersLogo.png";
 import Image from "next/image";
 import { v4 as uuidv4 } from "uuid";
 import WhisperActions from "../WhisperAction/WhisperActions";
-import {
-  Message,
-  PreviewFile,
-  FileMeta,
-} from "@/lib/interface/typescriptinterface";
-import {
-  mergeUpdatedMessage,
-  removeReplyRecursively,
-} from "@/lib/utils/messageHelpers";
+import { Message, PreviewFile } from "@/lib/interface/typescriptinterface";
 import { useMessages } from "@/app/hooks/useMessages";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ChatPage() {
   const { activeTopic } = useTopic();
   const { user } = useUser();
-  const { messages, setMessages, isLoading, justSentIds } =
-    useMessages(activeTopic);
+  const { messages, isLoading, justSentIds } = useMessages(activeTopic);
+
+  const queryClient = useQueryClient();
 
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isSending, setIsSending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   const [autoScroll, setAutoScroll] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const lastMessageCountRef = useRef(0); // Track message count changes
 
   // Scroll tracking
   useEffect(() => {
@@ -55,32 +49,43 @@ export default function ChatPage() {
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Auto-scroll effect
-  // Auto-scroll effect
+  // Auto-scroll effect - FIXED
   useEffect(() => {
-    if (!messagesEndRef.current) return;
+    const container = messagesContainerRef.current;
+    if (!container) return;
 
+    // Check if new messages were added
+    const hasNewMessages = messages.length > lastMessageCountRef.current;
+    lastMessageCountRef.current = messages.length;
+
+    // On first load, scroll to bottom immediately
     if (isInitialLoad && !isLoading && messages.length > 0) {
-      // first load: jump to bottom
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-        setIsInitialLoad(false); // ✅ only turn off after actual scroll
+        container.scrollTop = container.scrollHeight;
       }, 100);
+      setIsInitialLoad(false);
       return;
     }
 
-    if (autoScroll) {
+    // Scroll to bottom if auto-scroll is enabled AND new messages were added
+    if (autoScroll && hasNewMessages) {
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        container.scrollTop = container.scrollHeight;
       }, 50);
     }
   }, [messages, autoScroll, isInitialLoad, isLoading]);
 
-  // Send message
+  // Send message with optimistic UI
   const handleSend = async () => {
     if ((!input.trim() && files.length === 0) || !activeTopic || !user) return;
 
     setIsSending(true);
+
+    // Clear input & files immediately so user can select new files
+    setInput("");
+    setFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
     const tempId = `temp-${uuidv4()}`;
     const tempMessage: Message = {
       _id: tempId,
@@ -101,13 +106,15 @@ export default function ChatPage() {
       })) as PreviewFile[],
     };
 
-    setMessages((prev) => [...prev, tempMessage]);
-    setInput("");
-    setFiles([]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    // Optimistic UI: add temp message
+    justSentIds.current.add(tempId);
+    queryClient.setQueryData<Message[]>(
+      ["messages", activeTopic],
+      (old = []) => [...old, tempMessage]
+    );
 
     const formData = new FormData();
-    formData.append("message", input);
+    formData.append("message", input || "");
     formData.append("topic", activeTopic);
     formData.append("clerkId", user.id);
     files.forEach((file) => formData.append("files", file));
@@ -117,51 +124,30 @@ export default function ChatPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // mark so the forthcoming Pusher echo is ignored
-      if (justSentIds?.current) {
-        justSentIds.current.add(newMessage._id);
-      }
-
-      // - remove any real copy Pusher may have already inserted
-      setMessages((prev) => {
-        const filtered = prev.filter(
-          (m) => m._id !== tempId && m._id !== newMessage._id
-        );
-        return [...filtered, newMessage];
-      });
+      // Replace temp message with real message
+      queryClient.setQueryData<Message[]>(
+        ["messages", activeTopic],
+        (old = []) => old.map((m) => (m._id === tempId ? newMessage : m))
+      );
+      justSentIds.current.add(newMessage._id);
     } catch (err) {
       console.error("❌ Failed to send message:", err);
-      setMessages((prev) =>
-        prev.map((m) => (m._id === tempId ? { ...m, status: "failed" } : m))
+      queryClient.setQueryData<Message[]>(
+        ["messages", activeTopic],
+        (old = []) =>
+          old.map((m) => (m._id === tempId ? { ...m, status: "failed" } : m))
       );
     } finally {
-      setIsSending(false);
+      setIsSending(false); // input is already cleared, user can select new files now
     }
   };
 
-  // Update / delete helpers
-  const handleUpdate = (updatedMsg: Message) => {
-    setMessages((prev) => mergeUpdatedMessage(prev, updatedMsg));
-  };
-
-  const handleDelete = (id: string, parentId?: string | null) => {
-    setMessages((prev) => {
-      if (!parentId) return prev.filter((m) => m._id !== id);
-      return prev.map((m) => ({
-        ...m,
-        replies: removeReplyRecursively(m.replies || [], id),
-      }));
-    });
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
+  const handleUploadClick = () => fileInputRef.current?.click();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const list = e.target.files;
-    if (!list || list.length === 0) return;
-    setFiles((prev) => [...prev, ...Array.from(list)]);
+    const files = e.target.files;
+    if (!files) return;
+    setFiles((prev) => [...prev, ...Array.from(files)]);
   };
 
   const handleRemoveFile = (index: number) => {
@@ -204,7 +190,6 @@ export default function ChatPage() {
                   isUser ? styles.user : styles.other
                 }`}
               >
-                {/* File previews inside messages */}
                 {msg.files?.map((file) => {
                   if ("type" in file && "name" in file) {
                     return (
@@ -243,19 +228,19 @@ export default function ChatPage() {
                   return null;
                 })}
 
-                {/* Message content */}
                 <WhisperActions
-                  _id={msg._id}
-                  message={msg.message}
-                  clerkId={msg.clerkId}
-                  likes={msg.likes || []}
-                  dislikes={msg.dislikes || []}
-                  replies={msg.replies || []}
-                  files={msg.files || []}
+                  {...msg}
                   topic={msg.topic}
-                  createdAt={msg.createdAt}
-                  onUpdate={handleUpdate}
-                  onDelete={handleDelete}
+                  onUpdate={() =>
+                    queryClient.invalidateQueries({
+                      queryKey: ["messages", activeTopic],
+                    })
+                  }
+                  onDelete={() =>
+                    queryClient.invalidateQueries({
+                      queryKey: ["messages", activeTopic],
+                    })
+                  }
                 />
               </div>
             );

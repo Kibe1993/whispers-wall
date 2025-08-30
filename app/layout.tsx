@@ -1,7 +1,9 @@
+// app/layout.tsx (server component)
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import ResponsiveLayout from "@/components/wrapper/ResponsiveLayout";
 import { ClerkProvider } from "@clerk/nextjs";
+import QueryProvider from "@/components/tanstack/QueryProvider";
 
 export const metadata: Metadata = {
   title: "WhispersWall",
@@ -24,7 +26,9 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body>
-          <ResponsiveLayout>{children}</ResponsiveLayout>
+          <QueryProvider>
+            <ResponsiveLayout>{children}</ResponsiveLayout>
+          </QueryProvider>
         </body>
       </html>
     </ClerkProvider>
