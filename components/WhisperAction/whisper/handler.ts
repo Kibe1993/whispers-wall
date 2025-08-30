@@ -1,5 +1,5 @@
-// handlers.ts
 import axios from "axios";
+import { FileMeta, Message } from "@/lib/interface/typescriptinterface";
 
 // --- Like ---
 export const handleLike = async ({
@@ -8,10 +8,10 @@ export const handleLike = async ({
   rootId,
   onUpdate,
 }: {
-  user: any;
+  user: { id: string } | null;
   _id: string;
   rootId: string;
-  onUpdate: (data: any) => void;
+  onUpdate: (data: Message) => void;
 }) => {
   if (!user) return;
   try {
@@ -32,10 +32,10 @@ export const handleDislike = async ({
   rootId,
   onUpdate,
 }: {
-  user: any;
+  user: { id: string } | null;
   _id: string;
   rootId: string;
-  onUpdate: (data: any) => void;
+  onUpdate: (data: Message) => void;
 }) => {
   if (!user) return;
   try {
@@ -56,7 +56,7 @@ export const handleDelete = async ({
   rootId,
   onDelete,
 }: {
-  user: any;
+  user: { id: string } | null;
   _id: string;
   rootId: string;
   onDelete: (_id: string, parentId?: string) => void;
@@ -84,12 +84,12 @@ export const handleReply = async ({
   onUpdate,
   onClear,
 }: {
-  user: any;
+  user: { id: string } | null;
   _id: string;
   rootId: string;
   message: string;
   files: File[];
-  onUpdate: (data: any) => void;
+  onUpdate: (data: Message) => void;
   onClear: () => void;
 }) => {
   if (!user) return;
@@ -121,7 +121,7 @@ export const handleReply = async ({
       message,
       clerkId: user.id,
       parentReplyId: _id !== rootId ? _id : undefined,
-      files: uploadedUrls.map((url) => ({ url })),
+      files: uploadedUrls.map((url) => ({ url } as FileMeta)),
     });
 
     onClear();
@@ -143,8 +143,8 @@ export const handleEdit = async ({
   _id: string;
   rootId: string;
   message: string;
-  files: any[];
-  onUpdate: (data: any) => void;
+  files: FileMeta[];
+  onUpdate: (data: Message) => void;
   onClose: () => void;
 }) => {
   if (!message.trim()) return;

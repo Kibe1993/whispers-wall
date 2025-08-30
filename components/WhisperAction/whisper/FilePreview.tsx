@@ -1,9 +1,10 @@
 import { useState } from "react";
 import styles from "../WhisperActions.module.css";
 import { File, Image, Video } from "lucide-react";
+import { FileMeta, PreviewFile } from "@/lib/interface/typescriptinterface";
 
 interface FilePreviewProps {
-  file: any;
+  file: FileMeta | PreviewFile;
   onImageClick: (url: string) => void;
 }
 

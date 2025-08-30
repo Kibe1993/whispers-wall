@@ -2,13 +2,14 @@ import { useState, useRef } from "react";
 import axios from "axios";
 import styles from "../WhisperActions.module.css";
 import { Upload } from "lucide-react";
+import { FileMeta, Message } from "@/lib/interface/typescriptinterface"; // adjust path
 
 interface ReplyInputProps {
   rootId: string;
   _id: string;
-  onUpdate: (data: any) => void;
+  onUpdate: (data: Message) => void;
   onCancel: () => void;
-  user: any;
+  user: { id: string; [key: string]: any };
 }
 
 export default function ReplyInput({
@@ -18,14 +19,25 @@ export default function ReplyInput({
   onCancel,
   user,
 }: ReplyInputProps) {
-  const [replyInput, setReplyInput] = useState("");
-  const [replyFiles, setReplyFiles] = useState<File[]>([]);
-  const [isReplying, setIsReplying] = useState(false);
+  const [replyInput, setReplyInput] = useState<string>("");
+  const [replyFiles, setReplyFiles] = useState<FileMeta[]>([]);
+  const [isReplying, setIsReplying] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleReplyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-    setReplyFiles(Array.from(e.target.files));
+    const filesArray: FileMeta[] = Array.from(e.target.files).map((file) => ({
+      url: URL.createObjectURL(file),
+      type: file.type.startsWith("image/")
+        ? "image"
+        : file.type.startsWith("video/")
+        ? "video"
+        : "raw",
+      mimeType: file.type,
+      name: file.name,
+      preview: true,
+    }));
+    setReplyFiles(filesArray);
     e.target.value = "";
   };
 
@@ -39,11 +51,11 @@ export default function ReplyInput({
 
     try {
       setIsReplying(true);
-      let uploadedUrls: string[] = [];
+      let uploadedFiles: FileMeta[] = [];
 
       if (replyFiles.length > 0) {
         const formData = new FormData();
-        replyFiles.forEach((file) => formData.append("file", file));
+        replyFiles.forEach((file) => formData.append("file", file.url)); // actual upload may vary
         formData.append(
           "upload_preset",
           process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET as string
@@ -55,16 +67,19 @@ export default function ReplyInput({
           { headers: { "Content-Type": "multipart/form-data" } }
         );
 
-        uploadedUrls = uploadResponse.data.secure_urls || [
-          uploadResponse.data.secure_url,
-        ];
+        uploadedFiles = Array.isArray(uploadResponse.data.secure_urls)
+          ? uploadResponse.data.secure_urls.map((url: string) => ({
+              url,
+              type: "raw",
+            }))
+          : [{ url: uploadResponse.data.secure_url, type: "raw" }];
       }
 
-      const res = await axios.post(`/api/messages/${rootId}/reply`, {
+      const res = await axios.post<Message>(`/api/messages/${rootId}/reply`, {
         message: replyInput,
         clerkId: user.id,
         parentReplyId: _id !== rootId ? _id : undefined,
-        files: uploadedUrls.map((url) => ({ url })),
+        files: uploadedFiles,
       });
 
       setReplyInput("");
@@ -90,8 +105,8 @@ export default function ReplyInput({
         {replyFiles.map((file, idx) => (
           <div key={idx} className={styles.replyPreviewItem}>
             <img
-              src={URL.createObjectURL(file)}
-              alt="preview"
+              src={file.url}
+              alt={file.name || "preview"}
               className={styles.replyPreviewImage}
             />
             <button

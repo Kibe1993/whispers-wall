@@ -128,7 +128,7 @@ export default function WhisperActions({
         user={user}
       />
 
-      {showReplyInput && (
+      {showReplyInput && user && (
         <ReplyInput
           rootId={rootId}
           _id={_id}

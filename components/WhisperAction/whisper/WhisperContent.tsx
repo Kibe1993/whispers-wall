@@ -2,15 +2,17 @@ import { useState } from "react";
 import axios from "axios";
 import styles from "../WhisperActions.module.css";
 import FilePreview from "./FilePreview";
+import { FileMeta, WhisperProps } from "@/lib/interface/typescriptinterface";
+import { Message } from "@/lib/interface/typescriptinterface";
 
 interface WhisperContentProps {
   message: string;
-  files: any[];
+  files: FileMeta[];
   isEditing: boolean;
   editInput: string;
   setEditInput: (input: string) => void;
   setIsEditing: (editing: boolean) => void;
-  onUpdate: (data: any) => void;
+  onUpdate: (data: Message) => void; // <-- change here
   _id: string;
   rootId: string;
   setSelectedImage: (url: string | null) => void;

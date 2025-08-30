@@ -4,6 +4,8 @@ export interface FileMeta {
   public_id?: string; // ✅ optional to support non-Cloudinary files
   type: "image" | "video" | "raw";
   format?: string;
+  mimeType?: string;
+  name?: string;
 }
 
 export interface PreviewFile extends FileMeta {
@@ -25,7 +27,7 @@ export interface Reply {
 export interface Message {
   _id: string;
   message?: string;
-  topic: string;
+  topic?: string;
   clerkId: string;
   createdAt: string;
   likes: string[];

@@ -11,10 +11,12 @@ import {
   ChevronUp,
 } from "lucide-react";
 
+import { Reply, WhisperProps } from "@/lib/interface/typescriptinterface";
+
 interface WhisperActionsBarProps {
   likes: string[];
   dislikes: string[];
-  replies: any[];
+  replies: Reply[];
   isAuthor: boolean;
   isAnonymous: boolean;
   onLike: () => void;
@@ -22,9 +24,9 @@ interface WhisperActionsBarProps {
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onToggleReplies: () => void; // added prop
-  repliesVisible: boolean; // added prop
-  user: any;
+  onToggleReplies: () => void;
+  repliesVisible: boolean;
+  user: { id: string } | null;
 }
 
 export default function WhisperActionsBar({

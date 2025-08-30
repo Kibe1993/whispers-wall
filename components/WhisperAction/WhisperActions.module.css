@@ -1,3 +1,6 @@
+/* ==========================
+   Container & General Styles
+========================== */
 .whisperContainer {
   padding: 0.75rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
@@ -5,7 +8,9 @@
   color: #e7e2e2;
 }
 
-/* Meta row */
+/* ==========================
+   Meta Row (Username, Timestamp)
+========================== */
 .meta {
   display: flex;
   align-items: center;
@@ -30,7 +35,9 @@
   font-size: 12px;
 }
 
-/* Message */
+/* ==========================
+   Message Text
+========================== */
 .messageText {
   font-size: 15px;
   line-height: 1.5;
@@ -39,7 +46,9 @@
   word-break: break-word;
 }
 
-/* File attachments and previews */
+/* ==========================
+   File Attachments & Previews
+========================== */
 .fileAttachments {
   display: flex;
   flex-wrap: wrap;
@@ -87,7 +96,9 @@
   background: #e0e0e0;
 }
 
-/* Actions */
+/* ==========================
+   Actions (Like, Dislike, Reply, Edit, Delete)
+========================== */
 .actions {
   display: flex;
   gap: 1.5rem;
@@ -110,7 +121,9 @@
   color: #b48ef7;
 }
 
-/* Reply input wrapper */
+/* ==========================
+   Reply Input Section
+========================== */
 .replyInputWrapper {
   display: flex;
   flex-direction: column;
@@ -118,7 +131,6 @@
   margin-top: 0.35rem;
 }
 
-/* Reply file previews */
 .replyPreviewContainer {
   display: flex;
   flex-wrap: wrap;
@@ -161,7 +173,6 @@
   background: rgba(255, 0, 0, 0.7);
 }
 
-/* Input row */
 .replyInput {
   display: flex;
   align-items: center;
@@ -204,7 +215,9 @@
   background-color: #9a6fd6;
 }
 
-/* Replies thread */
+/* ==========================
+   Replies Thread
+========================== */
 .replies {
   margin-top: 0.5rem;
   border-left: 2px solid rgba(255, 255, 255, 0.1);
@@ -214,7 +227,9 @@
   gap: 0.25rem;
 }
 
-/* Edit state */
+/* ==========================
+   Edit State (Editing a Message)
+========================== */
 .editContainer {
   display: flex;
   flex-direction: column;
@@ -271,7 +286,9 @@
   background-color: #d94343;
 }
 
-/* Modal styles */
+/* ==========================
+   Modal (Image Preview)
+========================== */
 .modalOverlay {
   position: fixed;
   inset: 0;
@@ -317,7 +334,9 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Loading placeholders */
+/* ==========================
+   Loading Placeholders
+========================== */
 .mediaPlaceholder {
   display: flex;
   flex-direction: column;
@@ -336,7 +355,9 @@
   filter: blur(10px);
 }
 
-/* Responsive design */
+/* ==========================
+   Responsive Design
+========================== */
 @media (min-width: 768px) {
   .modalContent {
     max-width: 70vw;
