@@ -220,9 +220,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
     file: FileMeta & { mimeType?: string; type?: string }
   ) => {
     if (!file.url) return null;
-
-    // Skip rendering for blob: (local preview handled separately)
-    if (file.url.startsWith("blob:")) return null;
+    if (file.url.startsWith("blob:")) return null; // ✅ never render blobs here
 
     const url = file.url;
     const type = file.mimeType || file.type || "";
@@ -252,7 +250,6 @@ export default function WhisperActions(props: WhisperActionsProps) {
       );
     }
 
-    // Only fallback for non-media docs (pdf, zip, etc)
     return (
       <div className={styles.filePreviewItem} key={file._id || url}>
         <a href={url} target="_blank" rel="noopener noreferrer">

@@ -56,13 +56,15 @@ export default function ChatPage() {
   }, []);
 
   // Auto-scroll effect
+  // Auto-scroll effect
   useEffect(() => {
     if (!messagesEndRef.current) return;
 
-    if (isInitialLoad && messages.length > 0) {
+    if (isInitialLoad && !isLoading && messages.length > 0) {
+      // first load: jump to bottom
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-        setIsInitialLoad(false);
+        setIsInitialLoad(false); // ✅ only turn off after actual scroll
       }, 100);
       return;
     }
@@ -72,7 +74,7 @@ export default function ChatPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 50);
     }
-  }, [messages, autoScroll, isInitialLoad]);
+  }, [messages, autoScroll, isInitialLoad, isLoading]);
 
   // Send message
   const handleSend = async () => {
