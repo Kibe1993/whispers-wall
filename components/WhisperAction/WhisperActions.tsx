@@ -60,8 +60,11 @@ export default function WhisperActions(props: WhisperActionsProps) {
   const [isDisliking, setIsDisliking] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+  const [loadedVideos, setLoadedVideos] = useState<Set<string>>(new Set());
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Check if user is author only when user data is loaded
   const isAuthor = isUserLoaded && user && clerkId && clerkId === user.id;
@@ -86,6 +89,14 @@ export default function WhisperActions(props: WhisperActionsProps) {
     const interval = setInterval(updateTime, 60000);
     return () => clearInterval(interval);
   }, [createdAt]);
+
+  /** Auto-scroll to new messages */
+  useEffect(() => {
+    if (containerRef.current && !isEditing && !showReplyInput) {
+      // Scroll to the bottom of the container when new content appears
+      containerRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [message, files, replies, isEditing, showReplyInput]);
 
   /** Like */
   const handleLike = async () => {
@@ -216,11 +227,21 @@ export default function WhisperActions(props: WhisperActionsProps) {
     setReplyFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Handle image load
+  const handleImageLoad = (url: string) => {
+    setLoadedImages((prev) => new Set(prev).add(url));
+  };
+
+  // Handle video load
+  const handleVideoLoad = (url: string) => {
+    setLoadedVideos((prev) => new Set(prev).add(url));
+  };
+
   const renderFilePreview = (
     file: FileMeta & { mimeType?: string; type?: string }
   ) => {
     if (!file.url) return null;
-    if (file.url.startsWith("blob:")) return null; // ✅ never render blobs here
+    if (file.url.startsWith("blob:")) return null;
 
     const url = file.url;
     const type = file.mimeType || file.type || "";
@@ -230,30 +251,60 @@ export default function WhisperActions(props: WhisperActionsProps) {
     const isVideo = type.startsWith("video/") || /\.(mp4|webm|ogg)$/i.test(url);
 
     if (isImage) {
+      const isLoaded = loadedImages.has(url);
+
       return (
         <div className={styles.filePreviewItem} key={file._id || url}>
+          {!isLoaded && (
+            <div className={styles.mediaPlaceholder}>
+              <Image size={24} />
+              <span>Loading image...</span>
+            </div>
+          )}
           <img
             src={url}
             alt="Attachment"
-            className={styles.fileImage}
+            className={`${styles.fileImage} ${isLoaded ? styles.loaded : ""}`}
             onClick={() => setSelectedImage(url)}
+            onLoad={() => handleImageLoad(url)}
+            style={{ display: isLoaded ? "block" : "none" }}
           />
         </div>
       );
     }
 
     if (isVideo) {
+      const isLoaded = loadedVideos.has(url);
+
       return (
         <div className={styles.filePreviewItem} key={file._id || url}>
-          <video src={url} controls className={styles.fileVideo} />
+          {!isLoaded && (
+            <div className={styles.mediaPlaceholder}>
+              <Video size={24} />
+              <span>Loading video...</span>
+            </div>
+          )}
+          <video
+            src={url}
+            controls
+            className={`${styles.fileVideo} ${isLoaded ? styles.loaded : ""}`}
+            onLoadedData={() => handleVideoLoad(url)}
+            style={{ display: isLoaded ? "block" : "none" }}
+          />
         </div>
       );
     }
 
     return (
       <div className={styles.filePreviewItem} key={file._id || url}>
-        <a href={url} target="_blank" rel="noopener noreferrer">
-          <File size={16} /> <span>Download File</span>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.fileLink}
+        >
+          <File size={16} />
+          <span>Download File</span>
         </a>
       </div>
     );
@@ -266,6 +317,7 @@ export default function WhisperActions(props: WhisperActionsProps) {
 
   return (
     <div
+      ref={containerRef}
       className={`${styles.whisperContainer} ${
         isAnonymous ? styles.anonymous : ""
       }`}
